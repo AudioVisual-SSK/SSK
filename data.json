@@ -18,11 +18,6 @@
           "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779354206/xuyjxolzoyu5rqwzgwqi.jpg"
         },
         {
-          "id": "ph_1779355719415_0",
-          "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779355719/d4ekfexb1g6g4ra1oads.png",
-          "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779355719/d4ekfexb1g6g4ra1oads.png"
-        },
-        {
           "id": "ph_1779356478326_0",
           "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779356478/rhgtrkd8oumszqe57hkm.jpg",
           "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779356478/rhgtrkd8oumszqe57hkm.jpg"
@@ -34,11 +29,11 @@
   ],
   "requests": [
     {
-      "id": "req_1779358353802",
-      "photoId": "ph_1779355719415_0",
+      "id": "req_1779358367308",
+      "photoId": "ph_1779356478326_0",
       "eventId": "ev_1779351275016",
       "eventName": "งานแต่ง",
-      "photoData": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779355719/d4ekfexb1g6g4ra1oads.png",
+      "photoData": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779356478/rhgtrkd8oumszqe57hkm.jpg",
       "reason": ".",
       "date": "21/5/2569"
     }
