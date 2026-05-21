@@ -1070,14 +1070,37 @@ function initCEO() {
   let users = getUsers();
   if (!users.find(u => u.username === 'CEO')) {
     users.unshift({
-      id: 'ceo_root', username: 'CEO', password: 'CEO1234',  // ← แก้ตรงนี้
-      name: 'ชิชิงอน', role: 'CEO', isRoot: true,
-      avatar: null, approved: true
+      id: 'ceo_root',
+      username: 'CEO',
+      password: 'CEO1234',      // ← แก้แล้ว จาก pasword เป็น password
+      name: 'ชิชิงอน',
+      role: 'CEO',
+      isRoot: true,
+      avatar: null,
+      approved: true
     });
     setUsers(users);
   }
 }
-initCEO();  // ← เพิ่มบรรทัดนี้ให้เรียกใช้
+initCEO();// ← ต้องเรียกทันทีเรียกใช้
+(async function () {
+  await loadData();
+
+  const saved = DB.get('tnk_saved_login', null);
+  if (saved) {
+    const users = getUsers();
+    const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
+    if (user) {
+      currentUser = user;
+      await showAdminView();
+      return;
+    }
+  }
+
+  if (!currentUser) {
+    renderPublicEvents();
+  }
+})();
 // ---- โหลดข้อมูลกลางก่อน แล้วจึงตัดสินใจแสดง UI ----
 (async function () {
   await loadData();
@@ -1150,6 +1173,11 @@ function doLogin() {
   const rem = document.getElementById('remember-me').checked;
   if (!u || !p) { showToast('⚠️ กรุณากรอกข้อมูลให้ครบ'); return; }
   const users = getUsers();
+  // ถ้ายังไม่มี CEO ให้สร้างทันที
+  if (!users.find(u => u.username === 'CEO' && u.approved)) {
+  users.push({ id:'ceo_root', username:'CEO', password:'CEO1234', name:'ชิชิงอน', role:'CEO', isRoot:true, avatar:null, approved:true });
+  setUsers(users);
+}
   const user = users.find(x => x.username === u && x.password === p);
   if (!user) { showToast('❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); return; }
   if (!user.approved) { showToast('⏳ บัญชียังไม่ได้รับการอนุมัติ'); return; }
