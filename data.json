@@ -43,7 +43,7 @@
           "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779382907/ubmhol3gwvr43u3ivevi.jpg"
         }
       ],
-      "visible": false,
+      "visible": true,
       "createdAt": 1779378590918
     },
     {
@@ -84,14 +84,9 @@
           "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779371074/tkubhtbpadlz3ma44rnc.jpg"
         },
         {
-          "id": "ph_1779386548673_0",
-          "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779386548/dwjnohy1jsoysy3nxgb2.jpg",
-          "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779386548/dwjnohy1jsoysy3nxgb2.jpg"
-        },
-        {
-          "id": "ph_1779386549528_1",
-          "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779386549/lypweinrtawvbil3p2em.png",
-          "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779386549/lypweinrtawvbil3p2em.png"
+          "id": "ph_1779386703435_0",
+          "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779386703/x2a75n1itevcbpoen1p2.jpg",
+          "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779386703/x2a75n1itevcbpoen1p2.jpg"
         }
       ],
       "visible": true,
