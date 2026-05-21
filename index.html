@@ -983,14 +983,65 @@ async function uploadToCloudinary(file) {
     return data.secure_url;  // URL สำหรับแสดงรูป
 }
 
+// ---- ใช้ data.json สำหรับ Events/Requests ----
+let appData = { events: [], requests: [] };
+
+let githubToken = localStorage.getItem('tnk_github_token') || '';
+
+async function saveDataToGitHub() {
+  if (!githubToken) return;
+
+  // ⚠️ เปลี่ยนตรงนี้เป็น YOUR_USERNAME/YOUR_REPO
+  const repo = 'thanakon08/tnk-events';   // เช่น 'tnkstudio/tnk-events'
+  const path = 'data.json';
+  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+  try {
+    const getRes = await fetch(url, {
+      headers: { Authorization: `token ${githubToken}` }
+    });
+    const getData = await getRes.json();
+    const sha = getData.sha;
+
+    const jsonString = JSON.stringify(appData, null, 2);
+    const content = btoa(unescape(encodeURIComponent(jsonString)));
+
+    const putRes = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${githubToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: 'Update data.json',
+        content: content,
+        sha: sha
+      })
+    });
+    if (!putRes.ok) throw new Error('GitHub API error');
+    console.log('อัปเดต data.json สำเร็จ');
+  } catch (err) {
+    console.error('บันทึกไม่สำเร็จ:', err);
+    showToast('⚠️ บันทึกไม่สำเร็จ (เช็ก Token หรือเน็ต)');
+  }
+}
+
+function getEvents() { return appData.events; }
+function setEvents(newEvents) {
+  appData.events = newEvents;
+  saveDataToGitHub();
+}
+function getRequests() { return appData.requests; }
+function setRequests(newRequests) {
+  appData.requests = newRequests;
+  saveDataToGitHub();
+}
+
+// ส่วน Users และ Pending ยังคงใช้ localStorage (เฉพาะเครื่องแอดมิน)
 function getUsers() { return DB.get('tnk_users', []); }
 function setUsers(u) { DB.set('tnk_users', u); }
-function getEvents() { return DB.get('tnk_events', []); }
-function setEvents(e) { DB.set('tnk_events', e); }
 function getPending() { return DB.get('tnk_pending', []); }
 function setPending(p) { DB.set('tnk_pending', p); }
-function getRequests() { return DB.get('tnk_requests', []); }
-function setRequests(r) { DB.set('tnk_requests', r); }
 
 // ======= INIT CEO ACCOUNT =======
 function initCEO() {
@@ -1004,22 +1055,25 @@ function initCEO() {
     setUsers(users);
   }
 }
-initCEO();
+// ---- โหลดข้อมูลกลางก่อน แล้วจึงตัดสินใจแสดง UI ----
+(async function () {
+  await loadData();
 
-// ★★★ ล้าง events เก่าที่เป็น base64 (หลังจากรันครั้งแรกแล้วให้ลบบรรทัดนี้ออก) ★★★
-// setEvents([]);
-
-// Check saved login
-(function() {
   const saved = DB.get('tnk_saved_login', null);
   if (saved) {
     const users = getUsers();
     const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
-    if (user) { currentUser = user; showAdminView(); }
+    if (user) {
+      currentUser = user;
+      await showAdminView();
+      return;
+    }
+  }
+
+  if (!currentUser) {
+    renderPublicEvents();
   }
 })();
-
-if (!currentUser) renderPublicEvents();
 
 // ======= RENDER PUBLIC EVENTS =======
 function renderPublicEvents() {
@@ -1078,6 +1132,14 @@ function doLogin() {
   if (!user.approved) { showToast('⏳ บัญชียังไม่ได้รับการอนุมัติ'); return; }
   currentUser = user;
   if (rem) DB.set('tnk_saved_login', { u, p });
+  // ถ้าเป็นแอดมินและยังไม่มี Token → ให้ถาม
+if (!githubToken) {
+  githubToken = prompt('🔐 กรุณาวาง GitHub Personal Access Token (repo scope) เพื่อให้ระบบบันทึกข้อมูลกลางได้:');
+  if (githubToken) {
+    localStorage.setItem('tnk_github_token', githubToken);
+    showToast('✅ Token ถูกบันทึกไว้ในเครื่องนี้แล้ว');
+  }
+}
   closeModal('loginModal');
   showAdminView();
   showToast(`✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ${user.name}`);
@@ -1116,7 +1178,8 @@ function handleRegAvatar(input) {
 }
 
 // ======= SHOW ADMIN VIEW =======
-function showAdminView() {
+async function showAdminView() {
+  await loadData();   // โหลดข้อมูลล่าสุดก่อน
   document.getElementById('header-section').style.display = 'none';
   document.getElementById('gold-section').style.display = 'none';
   document.getElementById('admin-header').classList.add('active');
