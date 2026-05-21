@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TNK OFFICIAL</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Sarabun:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ========== CSS EXACTLY AS PROVIDED (UNCHANGED) ========== */
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #F5E6C0;
+    --gold-dark: #8B6914;
+    --gold-bg: #FBF3DC;
+    --gold-divider: #B8922A;
+    --white: #FFFFFF;
+    --black: #1A1A1A;
+    --red: #E53E3E;
+    --green: #38A169;
+    --blue: #3182CE;
+    --gray: #718096;
+    --gray-light: #F7FAFC;
+    --shadow: 0 4px 20px rgba(0,0,0,0.12);
+    --shadow-lg: 0 10px 40px rgba(0,0,0,0.18);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Sarabun',sans-serif; background:#fff; color:var(--black); overflow-x:hidden; }
+
+  #header-section {
+    background: var(--white);
+    padding: 32px 20px 20px;
+    text-align: center;
+  }
+  .logo-tnk {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: clamp(52px, 10vw, 88px);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 2px 2px 0px var(--gold-dark), 0 0 30px rgba(201,168,76,0.3);
+    letter-spacing: 8px;
+    line-height: 1;
+  }
+  .logo-official {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(14px, 3vw, 20px);
+    font-weight: 600;
+    color: var(--black);
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .header-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+  .btn-login, .btn-register {
+    padding: 10px 28px;
+    border-radius: 12px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid;
+    transition: all 0.25s ease;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .btn-login {
+    background: white;
+    border-color: var(--gold-dark);
+    color: var(--gold-dark);
+    box-shadow: 3px 3px 0 var(--gold-light), inset 0 0 0 0 var(--gold);
+  }
+  .btn-login:hover { background: var(--gold-dark); color: white; box-shadow: 4px 4px 0 var(--gold); }
+  .btn-register {
+    background: var(--gold);
+    border-color: var(--gold-dark);
+    color: white;
+    box-shadow: 3px 3px 0 var(--gold-dark);
+  }
+  .btn-register:hover { background: var(--gold-dark); box-shadow: 4px 4px 0 var(--black); }
+  .header-notice {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--gray);
+    font-family: 'Sarabun', sans-serif;
+  }
+  .gold-divider {
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--gold-divider), var(--gold), var(--gold-divider), transparent);
+    margin: 0;
+  }
+
+  #gold-section {
+    background: var(--gold-bg);
+    min-height: 60vh;
+    padding: 30px 20px 40px;
+  }
+  .find-memories-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 5vw, 42px);
+    color: var(--gold-dark);
+    text-align: center;
+    margin-bottom: 28px;
+    font-style: italic;
+    text-shadow: 1px 1px 0 rgba(201,168,76,0.4);
+  }
+  .find-memories-title::before { content: '✨ '; }
+  .find-memories-title::after { content: ' ✨'; }
+  .no-event-msg {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--gold-dark);
+  }
+  .no-event-msg .icon { font-size: 48px; margin-bottom: 12px; }
+  .no-event-msg p { font-family: 'Playfair Display',serif; font-size: 20px; font-style: italic; }
+  .events-list { display: flex; flex-direction: column; gap: 20px; max-width: 700px; margin: 0 auto; }
+  .event-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    border: 1.5px solid var(--gold-light);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .event-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  .event-cover { width: 100%; height: 200px; object-fit: cover; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 40px; }
+  .event-cover img { width:100%; height:100%; object-fit:cover; }
+  .event-info { padding: 14px 18px; }
+  .event-name { font-family:'Playfair Display',serif; font-size: 20px; font-weight: 700; color: var(--black); margin-bottom: 8px; }
+  .event-meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--gray); align-items: center; }
+  .event-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 1000;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: white; border-radius: 20px; width: 100%; max-width: 440px;
+    box-shadow: var(--shadow-lg); position: relative;
+    max-height: 92vh; overflow-y: auto;
+    animation: popIn 0.25s ease;
+  }
+  @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-header {
+    padding: 22px 22px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1.5px solid var(--gold-light); padding-bottom: 14px;
+  }
+  .modal-title { font-family:'Playfair Display',serif; font-size: 20px; font-weight: 700; color: var(--gold-dark); }
+  .modal-close {
+    background: none; border: none; font-size: 20px; cursor: pointer;
+    color: var(--gray); width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .modal-close:hover { background: #fee2e2; color: var(--red); }
+  .modal-body { padding: 18px 22px 22px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--black); margin-bottom: 5px; }
+  .form-input {
+    width: 100%; padding: 10px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; font-family:'Sarabun',sans-serif; font-size: 14px;
+    transition: border 0.2s; outline: none;
+  }
+  .form-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.15); }
+  .btn-primary {
+    width: 100%; padding: 12px; border-radius: 12px;
+    background: var(--gold); border: none; color: white;
+    font-family:'Sarabun',sans-serif; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-primary:hover { background: var(--gold-dark); }
+  .profile-upload-area {
+    border: 2px dashed var(--gold); border-radius: 50%; width: 90px; height: 90px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; margin: 0 auto 6px; overflow: hidden;
+    background: var(--gold-light); transition: all 0.2s;
+  }
+  .profile-upload-area:hover { border-style: solid; }
+  .profile-upload-area img { width:100%; height:100%; object-fit:cover; border-radius: 50%; }
+  .profile-upload-text { font-size: 11px; color: var(--gold-dark); text-align:center; margin-top: 4px; }
+  .remember-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; color: var(--gray); }
+  .remember-row input { accent-color: var(--gold); width: 15px; height: 15px; cursor: pointer; }
+
+  #admin-header {
+    display: none;
+    background: var(--white);
+    padding: 28px 20px 16px;
+    text-align: center;
+    position: sticky; top: 0; z-index: 200;
+    border-bottom: 1px solid #eee;
+  }
+  #admin-header.active { display: block; }
+  .admin-header-top { display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  .btn-manage {
+    padding: 9px 22px; border-radius: 12px; font-family:'Sarabun',sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: white; border: 2px solid var(--gold-dark); color: var(--gold-dark);
+    box-shadow: 3px 3px 0 var(--gold-light);
+    transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-manage:hover { background: var(--gold-dark); color: white; }
+  .btn-logout {
+    padding: 9px 22px; border-radius: 12px; font-family:'Sarabun',sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: #fff0f0; border: 2px solid #fc8181; color: #c53030;
+    box-shadow: 3px 3px 0 #fed7d7;
+    transition: all 0.2s;
+  }
+  .btn-logout:hover { background: #c53030; color: white; }
+
+  #admin-section-2 {
+    display: none;
+    background: var(--gold-bg);
+    padding: 20px 20px 0;
+    border-top: 4px solid var(--gold-divider);
+  }
+  #admin-section-2.active { display: block; }
+  .role-title {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: clamp(20px, 4vw, 32px);
+    color: var(--gold-dark);
+    text-align: center;
+    padding: 18px 0;
+    text-shadow: 1px 1px 0 rgba(201,168,76,0.3);
+  }
+  .nav-buttons {
+    display: flex; gap: 8px; justify-content: center;
+    flex-wrap: wrap; padding-bottom: 0;
+  }
+  .nav-btn {
+    padding: 10px 22px; border-radius: 10px; font-family:'Sarabun',sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: white; border: 1.5px solid var(--gold-light); color: var(--gray);
+    transition: all 0.2s;
+  }
+  .nav-btn.active { background: var(--gold); border-color: var(--gold-dark); color: white; box-shadow: 0 2px 8px rgba(201,168,76,0.4); }
+  .nav-btn:hover:not(.active) { border-color: var(--gold); color: var(--gold-dark); }
+  .nav-divider { height: 3px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin-top: 16px; }
+
+  #admin-section-3 { display: none; background: var(--gold-bg); padding: 24px 20px 40px; min-height: 60vh; }
+  #admin-section-3.active { display: block; }
+
+  .dashboard-top-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .btn-create-event {
+    padding: 10px 20px; border-radius: 12px; font-family:'Sarabun',sans-serif;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    background: var(--gold); border: none; color: white;
+    box-shadow: 0 3px 10px rgba(201,168,76,0.4);
+    transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-create-event:hover { background: var(--gold-dark); }
+  .btn-event-count {
+    padding: 10px 20px; border-radius: 12px; font-family:'Sarabun',sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: white; border: 1.5px solid var(--gold); color: var(--gold-dark);
+    transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-event-count:hover { background: var(--gold-light); }
+  .admin-events-list { display: flex; flex-direction: column; gap: 20px; max-width: 700px; margin: 0 auto; }
+  .admin-event-card {
+    background: white; border-radius: 16px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1.5px solid var(--gold-light);
+    transition: transform 0.2s;
+  }
+  .admin-event-card:hover { transform: translateY(-2px); }
+  .admin-event-cover { width: 100%; height: 180px; background: var(--gold-light); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .admin-event-cover img { width:100%; height:100%; object-fit:cover; }
+  .admin-event-body { padding: 14px 16px; }
+  .admin-event-name { font-family:'Playfair Display',serif; font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+  .admin-event-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--gray); justify-content: center; margin-bottom: 12px; }
+  .admin-event-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .admin-event-actions2 { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .btn-action {
+    padding: 7px 16px; border-radius: 9px; font-family:'Sarabun',sans-serif;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1.5px solid; transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+  }
+  .btn-upload { background: #ebf8ff; border-color: #63b3ed; color: #2b6cb0; }
+  .btn-upload:hover { background: #63b3ed; color: white; }
+  .btn-edit { background: #fefcbf; border-color: #f6e05e; color: #744210; }
+  .btn-edit:hover { background: #f6e05e; color: #744210; }
+  .btn-photos { background: #f0fff4; border-color: #68d391; color: #276749; }
+  .btn-photos:hover { background: #68d391; color: white; }
+  .btn-show { background: #f0fff4; border-color: var(--green); color: var(--green); }
+  .btn-show.hide-mode { background: #fff5f5; border-color: var(--red); color: var(--red); }
+  .btn-delete-event { background: #fff5f5; border-color: #fc8181; color: #c53030; }
+  .btn-delete-event:hover { background: #fc8181; color: white; }
+
+  .members-section { max-width: 700px; margin: 0 auto; }
+  .members-block { background: white; border-radius: 16px; padding: 18px; box-shadow: var(--shadow); border: 1.5px solid var(--gold-light); margin-bottom: 18px; }
+  .block-title { font-family:'Playfair Display',serif; font-size: 17px; font-weight: 700; color: var(--gold-dark); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .pending-list, .members-list { display: flex; flex-direction: column; gap: 10px; }
+  .member-item {
+    border: 1.5px solid var(--gold-light); border-radius: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .member-item:hover { box-shadow: 0 2px 12px rgba(201,168,76,0.2); }
+  .member-item-top { display: flex; align-items: flex-start; gap: 14px; padding: 12px 14px; }
+  .member-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: var(--gold-light); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .member-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+  .member-role-label { font-size: 11px; color: var(--gray); text-align: center; margin-top: 4px; }
+  .member-details { flex: 1; }
+  .member-info-line { font-size: 13px; margin-bottom: 3px; font-family:'Sarabun',sans-serif; display: flex; align-items: baseline; gap: 6px; }
+  .member-info-label { width: 20px; flex-shrink: 0; }
+  .member-item-bottom {
+    display: flex; border-top: 1.5px solid var(--gold-light);
+  }
+  .btn-approve, .btn-reject {
+    flex: 1; padding: 9px; font-family:'Sarabun',sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+    transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .btn-approve { background: #f0fff4; color: var(--green); }
+  .btn-approve:hover { background: var(--green); color: white; }
+  .btn-reject { background: #fff5f5; color: var(--red); border-left: 1.5px solid var(--gold-light); }
+  .btn-reject:hover { background: var(--red); color: white; }
+  .role-stats { margin-bottom: 10px; }
+  .role-stats p { font-size: 13px; margin-bottom: 4px; font-family:'Sarabun',sans-serif; }
+  .members-all-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .all-member-item { border: 1.5px solid var(--gold-light); border-radius: 12px; overflow: hidden; }
+  .all-member-top { display: flex; align-items: flex-start; gap: 14px; padding: 12px 14px; }
+  .all-member-divider { border: none; border-top: 1.5px solid var(--gold-light); margin: 0; }
+  .all-member-bottom { display: flex; gap: 8px; padding: 10px 14px; align-items: center; }
+  .role-select {
+    padding: 5px 10px; border-radius: 8px; border: 1.5px solid var(--gold-light);
+    font-family:'Sarabun',sans-serif; font-size: 12px; color: var(--black);
+    background: white; cursor: pointer; outline: none;
+  }
+  .role-select:focus { border-color: var(--gold); }
+  .btn-sm {
+    padding: 5px 14px; border-radius: 8px; font-family:'Sarabun',sans-serif;
+    font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid;
+    transition: all 0.2s;
+  }
+  .btn-sm-edit { background: #fefcbf; border-color: #f6e05e; color: #744210; }
+  .btn-sm-edit:hover { background: #f6e05e; }
+  .btn-sm-del { background: #fff5f5; border-color: #fc8181; color: #c53030; }
+  .btn-sm-del:hover { background: #fc8181; color: white; }
+  .self-label { font-size: 11px; color: var(--gold-dark); display: flex; align-items: center; gap: 4px; margin-left: auto; }
+
+  .profile-section { max-width: 500px; margin: 0 auto; background: white; border-radius: 20px; padding: 28px; box-shadow: var(--shadow); border: 1.5px solid var(--gold-light); }
+  .profile-avatar-wrap { text-align: center; margin-bottom: 20px; }
+  .profile-avatar-circle { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--gold); overflow: hidden; margin: 0 auto 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: var(--gold-light); font-size: 36px; }
+  .profile-avatar-circle img { width:100%; height:100%; object-fit:cover; }
+  .profile-change-text { font-size: 12px; color: var(--gold-dark); cursor: pointer; }
+  .profile-field { margin-bottom: 14px; }
+  .profile-field label { font-size: 13px; font-weight: 600; color: var(--black); display: block; margin-bottom: 5px; }
+  .profile-readonly { padding: 10px 14px; border-radius: 10px; background: var(--gray-light); border: 1.5px solid #e2e8f0; font-size: 14px; color: var(--gray); font-family:'Sarabun',sans-serif; }
+
+  .request-section { max-width: 700px; margin: 0 auto; }
+  .request-item { background: white; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); border: 1.5px solid var(--gold-light); margin-bottom: 16px; display: flex; }
+  .request-img { width: 130px; height: 130px; object-fit: cover; flex-shrink: 0; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; }
+  .request-img img { width:100%; height:100%; object-fit:cover; }
+  .request-details { flex: 1; padding: 14px; }
+  .request-details p { font-size: 13px; margin-bottom: 5px; font-family:'Sarabun',sans-serif; }
+  .request-actions { display: flex; border-top: 1.5px solid var(--gold-light); }
+  .btn-del-report { flex: 1; padding: 10px; background: #f0fff4; color: var(--green); font-family:'Sarabun',sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: background 0.2s; }
+  .btn-del-report:hover { background: var(--green); color: white; }
+  .btn-del-photo { flex: 1; padding: 10px; background: #fff5f5; color: var(--red); font-family:'Sarabun',sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; border: none; border-left: 1.5px solid var(--gold-light); transition: background 0.2s; }
+  .btn-del-photo:hover { background: var(--red); color: white; }
+  .request-badge {
+    position: absolute; top: -6px; right: -6px;
+    background: var(--red); color: white; border-radius: 50%;
+    width: 20px; height: 20px; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-btn-wrap { position: relative; display: inline-block; }
+
+  .photos-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .photo-thumb-wrap { position: relative; width: calc(50% - 4px); }
+  .photo-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; cursor: pointer; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 32px; transition: opacity 0.2s; }
+  .photo-thumb img { width:100%; height:100%; object-fit:cover; border-radius:10px; }
+  .photo-tick {
+    position: absolute; top: 6px; left: 6px;
+    background: rgba(0,0,0,0.5); color: white; border: none;
+    border-radius: 50%; width: 26px; height: 26px; font-size: 12px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+  .modal-box.large { max-width: 700px; }
+
+  .lightbox {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92); z-index: 2000;
+    align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .lightbox.active { display: flex; }
+  .lightbox-img { max-width: 90vw; max-height: 75vh; object-fit: contain; border-radius: 8px; }
+  .lightbox-controls { display: flex; gap: 16px; margin-top: 14px; align-items: center; }
+  .lb-btn {
+    background: rgba(255,255,255,0.15); border: none; color: white;
+    border-radius: 50%; width: 40px; height: 40px; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .lb-btn:hover { background: rgba(255,255,255,0.3); }
+  .lb-close { position: absolute; top: 16px; right: 16px; font-size: 24px; }
+  .lb-actions { display: flex; gap: 20px; margin-top: 10px; }
+  .lb-action-btn { background: none; border: none; color: white; font-family:'Sarabun',sans-serif; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 8px; transition: background 0.2s; }
+  .lb-action-btn:hover { background: rgba(255,255,255,0.15); }
+  .lb-action-del { color: #fc8181; }
+  .lb-action-dl { color: #68d391; }
+
+  #event-view {
+    display: none;
+    background: var(--gold-bg); min-height: 100vh;
+  }
+  #event-view.active { display: block; }
+  .event-view-header { padding: 14px 20px; }
+  .btn-back {
+    padding: 8px 18px; border-radius: 10px; font-family:'Sarabun',sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    background: white; border: 2px solid var(--gold-dark); color: var(--gold-dark);
+    box-shadow: 2px 2px 0 var(--gold-light); display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .btn-back:hover { background: var(--gold-dark); color: white; }
+  .event-view-card { max-width: 700px; margin: 0 auto 30px; background: white; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1.5px solid var(--gold-light); }
+  .event-view-cover { width: 100%; height: 240px; object-fit: cover; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 60px; }
+  .event-view-cover img { width:100%; height:100%; object-fit:cover; }
+  .event-view-body { padding: 18px 20px; }
+  .event-view-name { font-family:'Playfair Display',serif; font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 10px; }
+  .event-view-meta { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 13px; color: var(--gray); margin-bottom: 16px; }
+  .search-face-box {
+    border: 2px dashed var(--gold); border-radius: 16px; padding: 24px;
+    text-align: center; margin: 0 20px 20px; background: var(--gold-light);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .search-face-box:hover { background: white; border-style: solid; }
+  .search-face-icon { font-size: 36px; margin-bottom: 8px; }
+  .search-face-text1 { font-family:'Sarabun',sans-serif; font-size: 14px; font-weight: 700; color: var(--gold-dark); }
+  .search-face-text2 { font-size: 12px; color: var(--gray); }
+  .public-photos-section { padding: 0 20px 24px; }
+  .photos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .photos-header-left { font-family:'Playfair Display',serif; font-size: 16px; font-weight: 700; color: var(--black); }
+  .btn-dl-selected { padding: 7px 14px; border-radius: 9px; background: var(--gold); border: none; color: white; font-family:'Sarabun',sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .btn-dl-selected:hover { background: var(--gold-dark); }
+  .photos-divider { border: none; border-top: 2px solid var(--gold-light); margin-bottom: 14px; }
+  .public-photos-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pub-photo-wrap { position: relative; width: calc(50% - 4px); }
+  .pub-photo { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; cursor: pointer; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 30px; transition: opacity 0.2s; }
+  .pub-photo img { width:100%; height:100%; object-fit:cover; border-radius:10px; }
+  .pub-tick {
+    position: absolute; top: 6px; left: 6px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(255,255,255,0.9); border: 2px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 2; font-size: 11px;
+  }
+  .pub-tick.checked { background: var(--gold); border-color: var(--gold-dark); color: white; }
+  .pub-dl-btn {
+    position: absolute; bottom: 6px; right: 6px;
+    background: rgba(0,0,0,0.5); color: white; border: none;
+    border-radius: 50%; width: 26px; height: 26px; font-size: 12px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+
+  .report-photo-preview { width: 100%; border-radius: 10px; margin-bottom: 12px; max-height: 180px; object-fit: contain; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 48px; }
+  .report-photo-preview img { width:100%; border-radius:10px; max-height:180px; object-fit:contain; }
+
+  .event-list-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .event-list-item { width: calc(50% - 6px); cursor: pointer; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--gold-light); transition: all 0.2s; }
+  .event-list-item:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .event-list-cover { width: 100%; height: 90px; background: var(--gold-light); display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 28px; }
+  .event-list-cover img { width:100%; height:100%; object-fit:cover; }
+  .event-list-info { padding: 8px; background: white; }
+  .event-list-name { font-size: 13px; font-weight: 700; color: var(--black); margin-bottom: 3px; }
+  .event-list-date { font-size: 11px; color: var(--gray); }
+
+  .upload-progress { font-size: 13px; color: var(--gold-dark); text-align: center; margin-top: 8px; font-weight: 600; }
+
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: #1a1a1a; color: white; padding: 12px 24px; border-radius: 12px;
+    font-family:'Sarabun',sans-serif; font-size: 14px; z-index: 9999;
+    transition: transform 0.3s ease; box-shadow: var(--shadow-lg);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .confirm-text { font-size: 15px; color: var(--black); text-align: center; margin-bottom: 18px; line-height: 1.6; }
+  .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+  .btn-confirm-ok { padding: 10px 28px; border-radius: 10px; background: var(--red); border: none; color: white; font-family:'Sarabun',sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-confirm-cancel { padding: 10px 28px; border-radius: 10px; background: white; border: 1.5px solid #e2e8f0; color: var(--gray); font-family:'Sarabun',sans-serif; font-size: 14px; cursor: pointer; }
+
+  .no-items { text-align: center; padding: 30px; color: var(--gray); font-size: 15px; }
+  .hidden { display: none !important; }
+  .text-center { text-align: center; }
+  input[type="file"] { display: none; }
+  .modal-box::-webkit-scrollbar { width: 4px; }
+  .modal-box::-webkit-scrollbar-thumb { background: var(--gold-light); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ====== PUBLIC HEADER ====== -->
+<div id="header-section">
+  <div class="logo-tnk">TNK</div>
+  <div class="logo-official">OFFICIAL</div>
+  <div class="header-buttons">
+    <button class="btn-login" onclick="openModal('loginModal')">🔐 เข้าสู่ระบบ</button>
+    <button class="btn-register" onclick="openModal('registerModal')">✨ สมัครสมาชิก</button>
+  </div>
+  <div class="header-notice">📍 เข้าสู่ระบบและสมัครสมาชิกเฉพาะผู้ดูแลระบบ 📍</div>
+</div>
+<div class="gold-divider"></div>
+
+<!-- ====== PUBLIC GOLD SECTION ====== -->
+<div id="gold-section">
+  <div class="find-memories-title">Find Your Memories</div>
+  <div id="public-events-list"></div>
+</div>
+
+<!-- ====== ADMIN HEADER ====== -->
+<div id="admin-header">
+  <div class="logo-tnk">TNK</div>
+  <div class="logo-official">OFFICIAL</div>
+  <div class="admin-header-top">
+    <button class="btn-manage" onclick="scrollToTop()">⚙️ จัดการระบบ</button>
+    <button class="btn-logout" onclick="doLogout()">🚪 ออกจากระบบ</button>
+  </div>
+</div>
+<div class="gold-divider" id="admin-divider" style="display:none;"></div>
+
+<!-- ====== ADMIN SECTION 2 ====== -->
+<div id="admin-section-2">
+  <div class="role-title" id="role-display">👑 CEO</div>
+  <div class="nav-buttons">
+    <button class="nav-btn active" onclick="switchTab('home',this)">Home</button>
+    <button class="nav-btn" onclick="switchTab('dashboard',this)">Dashboard</button>
+    <div class="nav-btn-wrap">
+      <button class="nav-btn" onclick="switchTab('request',this)" id="nav-request-btn">Request</button>
+      <span class="request-badge hidden" id="request-badge">0</span>
+    </div>
+    <button class="nav-btn" onclick="switchTab('member',this)">Member</button>
+    <button class="nav-btn" onclick="switchTab('profile',this)">Profile</button>
+  </div>
+  <div class="nav-divider"></div>
+</div>
+
+<!-- ====== ADMIN SECTION 3 ====== -->
+<div id="admin-section-3">
+  <!-- HOME tab -->
+  <div id="tab-home">
+    <div class="find-memories-title">Find Your Memories</div>
+    <div id="admin-home-events"></div>
+  </div>
+  <!-- DASHBOARD tab -->
+  <div id="tab-dashboard" class="hidden">
+    <div class="dashboard-top-bar">
+      <button class="btn-create-event" onclick="openModal('createEventModal')">➕ สร้าง Event</button>
+      <button class="btn-event-count" onclick="openEventListModal()">📍 <span id="event-count-btn">0</span> Event</button>
+    </div>
+    <div class="admin-events-list" id="admin-events-container"></div>
+  </div>
+  <!-- REQUEST tab -->
+  <div id="tab-request" class="hidden">
+    <div class="request-section">
+      <div class="block-title">📬 คำร้องขอลบรูปภาพ</div>
+      <div id="request-list"></div>
+    </div>
+  </div>
+  <!-- MEMBER tab -->
+  <div id="tab-member" class="hidden">
+    <div class="members-section">
+      <div class="members-block">
+        <div class="block-title">⏳ รออนุมัติ</div>
+        <div class="pending-list" id="pending-list">
+          <div class="no-items">ไม่มีผู้สมัคร</div>
+        </div>
+      </div>
+      <div class="members-block">
+        <div class="block-title">👥 สมาชิกทั้งหมด</div>
+        <div class="role-stats" id="role-stats"></div>
+        <div class="members-all-list" id="all-members-list"></div>
+      </div>
+    </div>
+  </div>
+  <!-- PROFILE tab -->
+  <div id="tab-profile" class="hidden">
+    <div class="profile-section">
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar-circle" onclick="document.getElementById('profileAvatarInput').click()">
+          <span id="profile-avatar-display">👤</span>
+        </div>
+        <input type="file" id="profileAvatarInput" accept="image/*" onchange="handleProfileAvatarChange(this)">
+        <div class="profile-change-text">🖼️ เปลี่ยนรูปโปรไฟล์</div>
+      </div>
+      <div class="profile-field">
+        <label>🚩 ชื่อบัญชี (Username)</label>
+        <div class="profile-readonly" id="profile-username-display">-</div>
+        <input class="form-input hidden" id="profile-username-edit" type="text" placeholder="ชื่อบัญชี">
+      </div>
+      <div class="profile-field">
+        <label>🔤 ชื่อ</label>
+        <input class="form-input" id="profile-name-edit" type="text" placeholder="ชื่อ">
+      </div>
+      <div class="profile-field">
+        <label>🔑 รหัสผ่าน</label>
+        <input class="form-input" id="profile-password-edit" type="password" placeholder="รหัสผ่านใหม่">
+      </div>
+      <button class="btn-primary" onclick="saveProfile()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== EVENT VIEW (Public/Home) ====== -->
+<div id="event-view">
+  <div class="event-view-header">
+    <button class="btn-back" onclick="closeEventView()">← กลับ</button>
+  </div>
+  <div class="event-view-card" id="event-view-card">
+    <div class="event-view-cover" id="ev-cover">🖼️</div>
+    <div class="event-view-body">
+      <div class="event-view-name" id="ev-name">-</div>
+      <div class="event-view-meta" id="ev-meta"></div>
+    </div>
+  </div>
+  <div class="search-face-box" onclick="document.getElementById('faceSearchInput').click()">
+    <input type="file" id="faceSearchInput" accept="image/*" onchange="handleFaceSearch(this)">
+    <div class="search-face-icon">🔍</div>
+    <div class="search-face-text1">อัพโหลดรูปของคุณ</div>
+    <div class="search-face-text2">ค้นหาทุกภาพของคุณในงานนี้</div>
+  </div>
+  <div class="public-photos-section" id="public-photos-section">
+    <div class="photos-header">
+      <span class="photos-header-left">🖼️ รูปภาพทั้งหมด</span>
+      <button class="btn-dl-selected" onclick="downloadSelectedPublic()">⬇️ ดาวโหลดภาพที่เลือก</button>
+    </div>
+    <hr class="photos-divider">
+    <div class="public-photos-grid" id="public-photos-grid"></div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Login Modal -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">🔐 เข้าสู่ระบบ</span>
+      <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">🚩 ชื่อผู้ใช้งาน</label>
+        <input class="form-input" id="login-user" type="text" placeholder="กรอกชื่อผู้ใช้งาน">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔑 รหัสผ่าน</label>
+        <input class="form-input" id="login-pass" type="password" placeholder="กรอกรหัสผ่าน">
+      </div>
+      <div class="remember-row">
+        <input type="checkbox" id="remember-me">
+        <label for="remember-me">💾 จดจำรหัสผ่าน</label>
+      </div>
+      <button class="btn-primary" onclick="doLogin()">🚀 เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Register Modal -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">✨ สมัครสมาชิก</span>
+      <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="text-align:center">
+        <div class="profile-upload-area" id="reg-avatar-preview" onclick="document.getElementById('regAvatarInput').click()">
+          <span style="font-size:28px">📷</span>
+        </div>
+        <input type="file" id="regAvatarInput" accept="image/*" onchange="handleRegAvatar(this)">
+        <div class="profile-upload-text">📸 กดเพื่อเลือกรูปโปรไฟล์ <span style="color:red">*</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">🚩 ชื่อผู้ใช้งาน <span style="color:red">*</span></label>
+        <input class="form-input" id="reg-user" type="text" placeholder="ชื่อผู้ใช้งาน">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔑 รหัสผ่าน <span style="color:red">*</span></label>
+        <input class="form-input" id="reg-pass" type="password" placeholder="รหัสผ่าน">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔤 ชื่อ <span style="color:red">*</span></label>
+        <input class="form-input" id="reg-name" type="text" placeholder="ชื่อของคุณ">
+      </div>
+      <button class="btn-primary" onclick="doRegister()">🎉 สมัครสมาชิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Event Modal -->
+<div class="modal-overlay" id="createEventModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">➕ สร้าง Event</span>
+      <button class="modal-close" onclick="closeModal('createEventModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">📌 ชื่อ Event</label>
+        <input class="form-input" id="ce-name" type="text" placeholder="ชื่องาน">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🗓️ วันที่</label>
+        <input class="form-input" id="ce-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📝 รายละเอียด</label>
+        <input class="form-input" id="ce-desc" type="text" placeholder="รายละเอียดงาน">
+      </div>
+      <div class="form-group" style="text-align:center">
+        <div class="profile-upload-area" style="width:100%;height:120px;border-radius:12px;" id="ce-cover-preview" onclick="document.getElementById('ceCoverInput').click()">
+          <span style="font-size:32px">🖼️</span>
+          <div style="font-size:11px;color:var(--gold-dark)">เลือกรูปปก</div>
+        </div>
+        <input type="file" id="ceCoverInput" accept="image/*" onchange="handleCoverInput(this,'ce-cover-preview','ceCoverData')">
+        <input type="hidden" id="ceCoverData">
+      </div>
+      <button class="btn-primary" onclick="doCreateEvent()">🚀 สร้าง Event</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Event Modal -->
+<div class="modal-overlay" id="editEventModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">✏️ แก้ไข Event</span>
+      <button class="modal-close" onclick="closeModal('editEventModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ee-id">
+      <div class="form-group">
+        <label class="form-label">📌 ชื่อ Event</label>
+        <input class="form-input" id="ee-name" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🗓️ วันที่</label>
+        <input class="form-input" id="ee-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📝 รายละเอียด</label>
+        <input class="form-input" id="ee-desc" type="text">
+      </div>
+      <div class="form-group" style="text-align:center">
+        <div class="profile-upload-area" style="width:100%;height:120px;border-radius:12px;" id="ee-cover-preview" onclick="document.getElementById('eeCoverInput').click()">
+          <span style="font-size:32px">🖼️</span>
+        </div>
+        <input type="file" id="eeCoverInput" accept="image/*" onchange="handleCoverInput(this,'ee-cover-preview','eeCoverData')">
+        <input type="hidden" id="eeCoverData">
+      </div>
+      <button class="btn-primary" onclick="saveEditEvent()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Photos Modal -->
+<div class="modal-overlay" id="photosModal">
+  <div class="modal-box large">
+    <div class="modal-header">
+      <span class="modal-title">🖼️ รูปภาพ</span>
+      <button class="modal-close" onclick="closeModal('photosModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-action btn-upload" onclick="openPhotoUpload()" style="font-size:13px">⬆️ อัพโหลดเพิ่ม</button>
+        <button class="btn-action" style="background:#fff5f5;border-color:#fc8181;color:#c53030;font-size:13px" onclick="deleteCheckedPhotos()">🗑️ ลบที่เลือก</button>
+      </div>
+      <input type="hidden" id="photos-event-id">
+      <div class="photos-grid" id="photos-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">⬆️ อัพโหลดรูปภาพ</span>
+      <button class="modal-close" onclick="closeModal('uploadModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="upload-event-id">
+      <div class="form-group" style="text-align:center">
+        <div style="border:2px dashed var(--gold);border-radius:14px;padding:32px;cursor:pointer;background:var(--gold-light)" onclick="document.getElementById('photoUploadInput').click()">
+          <div style="font-size:40px">📁</div>
+          <div style="font-size:14px;color:var(--gold-dark);margin-top:8px">คลิกเพื่อเลือกรูปภาพ<br><span style="font-size:12px;color:var(--gray)">สามารถเลือกได้หลายรูปพร้อมกัน</span></div>
+        </div>
+        <input type="file" id="photoUploadInput" accept="image/*" multiple onchange="handlePhotoUpload(this)">
+      </div>
+      <div class="upload-progress hidden" id="upload-progress">กำลังอัพโหลด...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Event Confirm -->
+<div class="modal-overlay" id="deleteEventModal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-header">
+      <span class="modal-title">⚠️ ลบ Event</span>
+      <button class="modal-close" onclick="closeModal('deleteEventModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="del-event-id">
+      <p class="confirm-text">🗑️ ต้องการลบ Event นี้ใช่ไหม?<br><span style="font-size:12px;color:var(--gray)">การลบจะไม่สามารถกู้คืนได้</span></p>
+      <div class="confirm-actions">
+        <button class="btn-confirm-ok" onclick="confirmDeleteEvent()">✅ ตกลง</button>
+        <button class="btn-confirm-cancel" onclick="closeModal('deleteEventModal')">❌ ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Member Confirm -->
+<div class="modal-overlay" id="deleteMemberModal">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <span class="modal-title">⚠️ ลบสมาชิก</span>
+      <button class="modal-close" onclick="closeModal('deleteMemberModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="del-member-id">
+      <div id="del-member-preview" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px;background:var(--gold-light);border-radius:10px"></div>
+      <p class="confirm-text">ท่านต้องการลบสมาชิกท่านนี้หรือไม่?</p>
+      <div class="confirm-actions">
+        <button class="btn-confirm-ok" onclick="confirmDeleteMember()">✅ ตกลง</button>
+        <button class="btn-confirm-cancel" onclick="closeModal('deleteMemberModal')">❌ ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Member Modal -->
+<div class="modal-overlay" id="editMemberModal">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <span class="modal-title">✏️ แก้ไขสมาชิก</span>
+      <button class="modal-close" onclick="closeModal('editMemberModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="em-id">
+      <div class="form-group">
+        <label class="form-label">🚩 ชื่อบัญชี</label>
+        <input class="form-input" id="em-user" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔤 ชื่อ</label>
+        <input class="form-input" id="em-name" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔑 รหัสผ่าน</label>
+        <input class="form-input" id="em-pass" type="text">
+      </div>
+      <button class="btn-primary" onclick="saveMemberEdit()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+<!-- Event List Modal -->
+<div class="modal-overlay" id="eventListModal">
+  <div class="modal-box large">
+    <div class="modal-header">
+      <span class="modal-title">📍 Event ทั้งหมด</span>
+      <button class="modal-close" onclick="closeModal('eventListModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="event-list-grid" id="event-list-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">⚠️ แจ้งลบรูปภาพ</span>
+      <button class="modal-close" onclick="closeModal('reportModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="report-photo-id">
+      <input type="hidden" id="report-event-id">
+      <div class="report-photo-preview" id="report-photo-preview"><span style="font-size:48px">🖼️</span></div>
+      <div class="form-group">
+        <label class="form-label">📝 เหตุผลที่แจ้งลบ</label>
+        <textarea class="form-input" id="report-reason" rows="3" placeholder="ระบุเหตุผล..."></textarea>
+      </div>
+      <button class="btn-primary" onclick="submitReport()">📨 ส่งรายงาน</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Report Photo Confirm -->
+<div class="modal-overlay" id="delReportPhotoModal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-header">
+      <span class="modal-title">⚠️ ลบรูปภาพ</span>
+      <button class="modal-close" onclick="closeModal('delReportPhotoModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="del-report-id">
+      <p class="confirm-text">ต้องการลบรูปภาพนี้จริงไหม?<br><span style="font-size:12px;color:var(--gray)">รูปภาพจะถูกลบออกจาก Event ทันที</span></p>
+      <div class="confirm-actions">
+        <button class="btn-confirm-ok" onclick="confirmDelReportPhoto()">✅ ตกลง</button>
+        <button class="btn-confirm-cancel" onclick="closeModal('delReportPhotoModal')">❌ ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lb-btn lb-close" onclick="closeLightbox()">✕</button>
+  <img class="lightbox-img" id="lb-img" src="" alt="">
+  <div class="lightbox-controls">
+    <button class="lb-btn" onclick="lightboxPrev()">←</button>
+    <button class="lb-btn" onclick="lightboxNext()">→</button>
+  </div>
+  <div class="lb-actions">
+    <button class="lb-action-btn lb-action-del" id="lb-del-btn" onclick="lightboxDelete()">🗑️ ลบรูปภาพ</button>
+    <button class="lb-action-btn lb-action-dl" onclick="lightboxDownload()">⬇️ ดาวโหลด</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ======= STATE =======
+let currentUser = null;
+let regAvatarData = null;
+let lightboxPhotos = [];
+let lightboxIndex = 0;
+let lightboxMode = ''; // 'admin' or 'public'
+let lightboxEventId = null;
+let lightboxPhotoId = null;
+let currentEventView = null;
+
+// ======= STORAGE =======
+const DB = {
+  get: (k, def) => { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : def; } catch(e){ return def; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { showToast('⚠️ พื้นที่จัดเก็บเต็ม กรุณาลบรูปภาพหรือข้อมูลที่ไม่จำเป็น'); console.error('localStorage set error:', e); } }
+};
+
+// ====== CLOUDINARY CONFIG (เปลี่ยนตรงนี้เป็นของจริงของคุณ!) ======
+const CLOUDINARY_CLOUD_NAME = 'dbo8prouq';        // ← ใส่ Cloud Name ของคุณ
+const CLOUDINARY_UPLOAD_PRESET = 'tnk_upload';  // ← ใส่ Upload Preset ของคุณ
+
+/**
+ * อัพโหลดไฟล์รูปไป Cloudinary แล้วคืน URL ของรูปที่อัพโหลดสำเร็จ
+ * @param {File} file - ไฟล์รูปจาก input
+ * @returns {Promise<string>} - secure_url ของรูป
+ */
+async function uploadToCloudinary(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+            method: 'POST',
+            body: formData
+        }
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error?.message || 'Upload failed');
+    }
+    return data.secure_url;  // URL สำหรับแสดงรูป
+}
+
+function getUsers() { return DB.get('tnk_users', []); }
+function setUsers(u) { DB.set('tnk_users', u); }
+function getEvents() { return DB.get('tnk_events', []); }
+function setEvents(e) { DB.set('tnk_events', e); }
+function getPending() { return DB.get('tnk_pending', []); }
+function setPending(p) { DB.set('tnk_pending', p); }
+function getRequests() { return DB.get('tnk_requests', []); }
+function setRequests(r) { DB.set('tnk_requests', r); }
+
+// ======= INIT CEO ACCOUNT =======
+function initCEO() {
+  let users = getUsers();
+  if (!users.find(u => u.username === 'CEO')) {
+    users.unshift({
+      id: 'ceo_root', username: 'CEO', pasword: 'CEO1234',
+      name: 'ชิชิงอน', role: 'CEO', isRoot: true,
+      avatar: null, approved: true
+    });
+    setUsers(users);
+  }
+}
+initCEO();
+
+// ★★★ ล้าง events เก่าที่เป็น base64 (หลังจากรันครั้งแรกแล้วให้ลบบรรทัดนี้ออก) ★★★
+// setEvents([]);
+
+// Check saved login
+(function() {
+  const saved = DB.get('tnk_saved_login', null);
+  if (saved) {
+    const users = getUsers();
+    const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
+    if (user) { currentUser = user; showAdminView(); }
+  }
+})();
+
+if (!currentUser) renderPublicEvents();
+
+// ======= RENDER PUBLIC EVENTS =======
+function renderPublicEvents() {
+  const events = getEvents().filter(e => e.visible);
+  const container = document.getElementById('public-events-list');
+  if (events.length === 0) {
+    container.innerHTML = `<div class="no-event-msg"><div class="icon">🌟</div><p>ยังไม่มี EVENT ให้รับชม</p></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="events-list">${events.map(e => `
+    <div class="event-card" onclick="openEventView('${e.id}','public')">
+      <div class="event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
+      <div class="event-info">
+        <div class="event-name">${e.name}</div>
+        <div class="event-meta">
+          <span>🗓️ ${formatDate(e.date)}</span>
+          <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
+          <span>👤 ${(e.photos||[]).length} ใบหน้า</span>
+        </div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderAdminHomeEvents() {
+  const events = getEvents().filter(e => e.visible);
+  const container = document.getElementById('admin-home-events');
+  if (events.length === 0) {
+    container.innerHTML = `<div class="no-event-msg"><div class="icon">🌟</div><p>ยังไม่มี EVENT ให้รับชม</p></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="events-list">${events.map(e => `
+    <div class="event-card" onclick="openEventView('${e.id}','admin-home')">
+      <div class="event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
+      <div class="event-info">
+        <div class="event-name">${e.name}</div>
+        <div class="event-meta">
+          <span>🗓️ ${formatDate(e.date)}</span>
+          <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
+          <span>👤 ${(e.photos||[]).length} ใบหน้า</span>
+        </div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+// ======= LOGIN =======
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value.trim();
+  const rem = document.getElementById('remember-me').checked;
+  if (!u || !p) { showToast('⚠️ กรุณากรอกข้อมูลให้ครบ'); return; }
+  const users = getUsers();
+  const user = users.find(x => x.username === u && x.password === p);
+  if (!user) { showToast('❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); return; }
+  if (!user.approved) { showToast('⏳ บัญชียังไม่ได้รับการอนุมัติ'); return; }
+  currentUser = user;
+  if (rem) DB.set('tnk_saved_login', { u, p });
+  closeModal('loginModal');
+  showAdminView();
+  showToast(`✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ${user.name}`);
+}
+
+// ======= REGISTER =======
+function doRegister() {
+  const u = document.getElementById('reg-user').value.trim();
+  const p = document.getElementById('reg-pass').value.trim();
+  const n = document.getElementById('reg-name').value.trim();
+  if (!u || !p || !n) { showToast('⚠️ กรุณากรอกข้อมูลให้ครบ'); return; }
+  if (!regAvatarData) { showToast('⚠️ กรุณาเลือกรูปโปรไฟล์'); return; }
+  const users = getUsers();
+  if (users.find(x => x.username === u)) { showToast('❌ ชื่อผู้ใช้งานนี้มีอยู่แล้ว'); return; }
+  const pending = getPending();
+  if (pending.find(x => x.username === u)) { showToast('❌ ชื่อผู้ใช้งานนี้รอการอนุมัติอยู่'); return; }
+  pending.push({ id: 'p_'+Date.now(), username: u, password: p, name: n, avatar: regAvatarData, role: 'Admin' });
+  setPending(pending);
+  regAvatarData = null;
+  document.getElementById('reg-avatar-preview').innerHTML = '<span style="font-size:28px">📷</span>';
+  document.getElementById('reg-user').value = '';
+  document.getElementById('reg-pass').value = '';
+  document.getElementById('reg-name').value = '';
+  closeModal('registerModal');
+  showToast('✅ สมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแล');
+}
+
+function handleRegAvatar(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    regAvatarData = e.target.result;
+    document.getElementById('reg-avatar-preview').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ======= SHOW ADMIN VIEW =======
+function showAdminView() {
+  document.getElementById('header-section').style.display = 'none';
+  document.getElementById('gold-section').style.display = 'none';
+  document.getElementById('admin-header').classList.add('active');
+  document.getElementById('admin-divider').style.display = 'block';
+  document.getElementById('admin-section-2').classList.add('active');
+  document.getElementById('admin-section-3').classList.add('active');
+  // Role display
+  const roleMap = { CEO:'👑 CEO', SuperAdmin:'⭐ SuperAdmin', Admin:'👤 Admin' };
+  document.getElementById('role-display').textContent = roleMap[currentUser.role] || '👤 Admin';
+  switchTab('home', document.querySelector('.nav-btn'));
+  renderAdminHomeEvents();
+  renderDashboard();
+  renderMembers();
+  renderProfile();
+  updateRequestBadge();
+}
+
+function doLogout() {
+  currentUser = null;
+  DB.set('tnk_saved_login', null);
+  document.getElementById('header-section').style.display = 'block';
+  document.getElementById('gold-section').style.display = 'block';
+  document.getElementById('admin-header').classList.remove('active');
+  document.getElementById('admin-divider').style.display = 'none';
+  document.getElementById('admin-section-2').classList.remove('active');
+  document.getElementById('admin-section-3').classList.remove('active');
+  document.getElementById('event-view').classList.remove('active');
+  renderPublicEvents();
+  scrollToTop();
+}
+
+function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+// ======= TAB SWITCH =======
+function switchTab(tab, btn) {
+  ['home','dashboard','request','member','profile'].forEach(t => {
+    document.getElementById('tab-'+t).classList.add('hidden');
+  });
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tab === 'dashboard') renderDashboard();
+  if (tab === 'member') renderMembers();
+  if (tab === 'request') renderRequests();
+  if (tab === 'home') renderAdminHomeEvents();
+  if (tab === 'profile') renderProfile();
+}
+
+// ======= DASHBOARD =======
+function renderDashboard() {
+  const events = getEvents();
+  document.getElementById('event-count-btn').textContent = events.length;
+  const container = document.getElementById('admin-events-container');
+  if (events.length === 0) {
+    container.innerHTML = `<div class="no-items">📭 ยังไม่มี Event กดสร้าง Event เพื่อเริ่มต้น</div>`;
+    return;
+  }
+  container.innerHTML = events.map(e => `
+    <div class="admin-event-card" id="ev-card-${e.id}">
+      <div class="admin-event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '<span style="font-size:40px">🖼️</span>'}</div>
+      <div class="admin-event-body">
+        <div class="admin-event-name">${e.name}</div>
+        <div class="admin-event-meta">
+          <span>🗓️ ${formatDate(e.date)}</span>
+          <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
+          <span>👤 ${(e.photos||[]).length} ใบหน้า</span>
+        </div>
+        <div class="admin-event-actions">
+          <button class="btn-action btn-upload" onclick="openUploadForEvent('${e.id}')">⬆️ อัพโหลด</button>
+          <button class="btn-action btn-edit" onclick="openEditEvent('${e.id}')">✏️ แก้ไข</button>
+          <button class="btn-action btn-photos" onclick="openPhotosModal('${e.id}')">🖼️ รูปภาพ</button>
+        </div>
+        <div class="admin-event-actions2">
+          <button class="btn-action btn-show ${e.visible ? '' : 'hide-mode'}" id="vis-btn-${e.id}" onclick="toggleVisibility('${e.id}')">
+            ${e.visible ? '👁️ แสดง' : '🙈 ซ่อน'}
+          </button>
+          <button class="btn-action btn-delete-event" onclick="openDeleteEvent('${e.id}')">🗑️ ลบ Event</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function doCreateEvent() {
+  const name = document.getElementById('ce-name').value.trim();
+  const date = document.getElementById('ce-date').value;
+  const desc = document.getElementById('ce-desc').value.trim();
+  const cover = document.getElementById('ceCoverData').value;
+  if (!name) { showToast('⚠️ กรุณากรอกชื่อ Event'); return; }
+  const events = getEvents();
+  events.unshift({ id: 'ev_'+Date.now(), name, date, desc, cover, photos: [], visible: true, createdAt: Date.now() });
+  setEvents(events);
+  closeModal('createEventModal');
+  document.getElementById('ce-name').value = '';
+  document.getElementById('ce-date').value = '';
+  document.getElementById('ce-desc').value = '';
+  document.getElementById('ceCoverData').value = '';
+  document.getElementById('ce-cover-preview').innerHTML = '<span style="font-size:32px">🖼️</span><div style="font-size:11px;color:var(--gold-dark)">เลือกรูปปก</div>';
+  renderDashboard();
+  showToast('✅ สร้าง Event เรียบร้อยแล้ว');
+}
+
+function openEditEvent(id) {
+  const events = getEvents();
+  const e = events.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('ee-id').value = id;
+  document.getElementById('ee-name').value = e.name;
+  document.getElementById('ee-date').value = e.date;
+  document.getElementById('ee-desc').value = e.desc || '';
+  document.getElementById('eeCoverData').value = e.cover || '';
+  const prev = document.getElementById('ee-cover-preview');
+  prev.innerHTML = e.cover ? `<img src="${e.cover}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">` : '<span style="font-size:32px">🖼️</span>';
+  openModal('editEventModal');
+}
+
+function saveEditEvent() {
+  const id = document.getElementById('ee-id').value;
+  const events = getEvents();
+  const idx = events.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  events[idx].name = document.getElementById('ee-name').value.trim();
+  events[idx].date = document.getElementById('ee-date').value;
+  events[idx].desc = document.getElementById('ee-desc').value.trim();
+  const newCover = document.getElementById('eeCoverData').value;
+  if (newCover) events[idx].cover = newCover;
+  setEvents(events);
+  closeModal('editEventModal');
+  renderDashboard();
+  showToast('✅ บันทึกเรียบร้อย');
+}
+
+function toggleVisibility(id) {
+  const events = getEvents();
+  const idx = events.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  events[idx].visible = !events[idx].visible;
+  setEvents(events);
+  renderDashboard();
+  showToast(events[idx].visible ? '👁️ แสดง Event แล้ว' : '🙈 ซ่อน Event แล้ว');
+}
+
+function openDeleteEvent(id) {
+  document.getElementById('del-event-id').value = id;
+  openModal('deleteEventModal');
+}
+
+function confirmDeleteEvent() {
+  const id = document.getElementById('del-event-id').value;
+  let events = getEvents();
+  events = events.filter(x => x.id !== id);
+  setEvents(events);
+  closeModal('deleteEventModal');
+  renderDashboard();
+  showToast('🗑️ ลบ Event เรียบร้อยแล้ว');
+}
+
+function openEventListModal() {
+  const events = getEvents();
+  const grid = document.getElementById('event-list-grid');
+  if (events.length === 0) { grid.innerHTML = '<div class="no-items">ยังไม่มี Event</div>'; }
+  else {
+    grid.innerHTML = events.map(e => `
+      <div class="event-list-item" onclick="jumpToEvent('${e.id}')">
+        <div class="event-list-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
+        <div class="event-list-info">
+          <div class="event-list-name">${e.name}</div>
+          <div class="event-list-date">🗓️ ${formatDate(e.date)}</div>
+        </div>
+      </div>`).join('');
+  }
+  openModal('eventListModal');
+}
+
+function jumpToEvent(id) {
+  closeModal('eventListModal');
+  const el = document.getElementById('ev-card-'+id);
+  if (el) { setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200); }
+}
+
+// ======= PHOTOS =======
+function openUploadForEvent(id) {
+  document.getElementById('upload-event-id').value = id;
+  document.getElementById('upload-progress').classList.add('hidden');
+  openModal('uploadModal');
+}
+
+function openPhotoUpload() {
+  document.getElementById('photoUploadInput').click();
+}
+
+// ★★★ ฟังก์ชันอัพโหลดรูปใหม่ – ใช้ Cloudinary แทน base64 ★★★
+async function handlePhotoUpload(input) {
+  const id = document.getElementById('upload-event-id').value || document.getElementById('photos-event-id').value;
+  if (!input.files.length) return;
+
+  const files = Array.from(input.files);
+  const prog = document.getElementById('upload-progress');
+  prog.classList.remove('hidden');
+  prog.textContent = `⬆️ เริ่มอัปโหลด 0/${files.length} รูป...`;
+
+  let done = 0;
+  const total = files.length;
+
+  for (let i = 0; i < files.length; i++) {
+    try {
+      const imageUrl = await uploadToCloudinary(files[i]);
+
+      const events = getEvents();
+      const evIndex = events.findIndex(e => e.id === id);
+      if (evIndex !== -1) {
+        events[evIndex].photos = events[evIndex].photos || [];
+        events[evIndex].photos.push({
+          id: 'ph_' + Date.now() + '_' + i,
+          data: imageUrl,           // เก็บเฉพาะ URL (ใช้ได้กับ <img src> โดยตรง)
+          cloudinaryUrl: imageUrl   // เก็บแยกไว้หากต้องการใช้ภายหลัง
+        });
+        setEvents(events);
+      }
+      done++;
+      prog.textContent = `⬆️ อัปโหลดแล้ว ${done}/${total} รูป...`;
+    } catch (err) {
+      console.error('Upload error:', err);
+      showToast(`❌ รูปที่ ${i+1} ไม่สามารถอัปโหลดได้: ${err.message}`);
+    }
+  }
+
+  prog.classList.add('hidden');
+  renderDashboard();
+  if (document.getElementById('photosModal').classList.contains('active')) {
+    openPhotosModal(id);
+  }
+  showToast(`✅ อัปโหลด ${done}/${total} รูปไปยัง Cloudinary เรียบร้อย`);
+  input.value = '';
+}
+
+function openPhotosModal(id) {
+  document.getElementById('photos-event-id').value = id;
+  const events = getEvents();
+  const ev = events.find(x => x.id === id);
+  const photos = ev ? (ev.photos || []) : [];
+  const grid = document.getElementById('photos-grid');
+  if (photos.length === 0) {
+    grid.innerHTML = '<div class="no-items">ยังไม่มีรูปภาพ</div>';
+  } else {
+    grid.innerHTML = photos.map((ph, i) => `
+      <div class="photo-thumb-wrap" id="phtw-${ph.id}">
+        <div class="photo-thumb" onclick="openLightboxAdmin('${id}',${i})">${`<img src="${ph.data}" alt="">`}</div>
+        <div class="photo-tick" id="tick-${ph.id}" onclick="togglePhotoTick('${ph.id}')"></div>
+        <button class="photo-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${i+1}.jpg')">⬇️</button>
+      </div>`).join('');
+  }
+  openModal('photosModal');
+}
+
+function togglePhotoTick(pid) {
+  const el = document.getElementById('tick-'+pid);
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
+}
+
+function deleteCheckedPhotos() {
+  const id = document.getElementById('photos-event-id').value;
+  const events = getEvents();
+  const idx = events.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const toDelete = [];
+  document.querySelectorAll('.photo-tick.checked').forEach(el => {
+    const pid = el.id.replace('tick-','');
+    toDelete.push(pid);
+  });
+  if (toDelete.length === 0) { showToast('⚠️ กรุณาเลือกรูปที่ต้องการลบ'); return; }
+  events[idx].photos = events[idx].photos.filter(ph => !toDelete.includes(ph.id));
+  setEvents(events);
+  openPhotosModal(id);
+  renderDashboard();
+  showToast(`🗑️ ลบ ${toDelete.length} รูปเรียบร้อย`);
+}
+
+// ======= LIGHTBOX ADMIN =======
+function openLightboxAdmin(eventId, idx) {
+  const events = getEvents();
+  const ev = events.find(x => x.id === eventId);
+  if (!ev) return;
+  lightboxPhotos = ev.photos || [];
+  lightboxIndex = idx;
+  lightboxMode = 'admin';
+  lightboxEventId = eventId;
+  document.getElementById('lb-del-btn').textContent = '🗑️ ลบรูปภาพ';
+  showLightbox();
+}
+function openLightboxPublic(photos, idx, eventId) {
+  lightboxPhotos = photos;
+  lightboxIndex = idx;
+  lightboxMode = 'public';
+  lightboxEventId = eventId;
+  document.getElementById('lb-del-btn').textContent = '⚠️ แจ้งลบรูปภาพ';
+  showLightbox();
+}
+
+function showLightbox() {
+  if (lightboxPhotos.length === 0) return;
+  const ph = lightboxPhotos[lightboxIndex];
+  document.getElementById('lb-img').src = ph.data;
+  lightboxPhotoId = ph.id;
+  document.getElementById('lightbox').classList.add('active');
+}
+
+function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+
+function lightboxPrev() {
+  lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length;
+  showLightbox();
+}
+
+function lightboxNext() {
+  lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length;
+  showLightbox();
+}
+
+function lightboxDelete() {
+  if (lightboxMode === 'admin') {
+    const events = getEvents();
+    const idx = events.findIndex(x => x.id === lightboxEventId);
+    if (idx < 0) return;
+    events[idx].photos = events[idx].photos.filter(ph => ph.id !== lightboxPhotoId);
+    setEvents(events);
+    closeLightbox();
+    openPhotosModal(lightboxEventId);
+    renderDashboard();
+    showToast('🗑️ ลบรูปภาพเรียบร้อย');
+  } else {
+    closeLightbox();
+    openReportModal(lightboxPhotoId, lightboxEventId, lightboxPhotos[lightboxIndex]);
+  }
+}
+
+function lightboxDownload() {
+  const ph = lightboxPhotos[lightboxIndex];
+  downloadPhoto(ph.data, 'photo_'+lightboxIndex+'.jpg');
+}
+
+// ======= MEMBERS =======
+function renderMembers() {
+  renderPending();
+  renderAllMembers();
+}
+
+function renderPending() {
+  const pending = getPending();
+  const container = document.getElementById('pending-list');
+  if (pending.length === 0) {
+    container.innerHTML = '<div class="no-items">ไม่มีผู้สมัคร</div>'; return;
+  }
+  container.innerHTML = pending.map(p => `
+    <div class="member-item" id="pend-${p.id}">
+      <div class="member-item-top">
+        <div>
+          <div class="member-avatar">${p.avatar ? `<img src="${p.avatar}" alt="">` : '👤'}</div>
+          <div class="member-role-label">👤 บัญชีทั่วไป</div>
+        </div>
+        <div class="member-details">
+          <div class="member-info-line"><span class="member-info-label">🚩</span><span>${p.username}</span></div>
+          <div class="member-info-line"><span class="member-info-label">🔤</span><span>${p.name}</span></div>
+          <div class="member-info-line"><span class="member-info-label">🔑</span><span>${canSeePassword() ? p.password : '••••••••'}</span></div>
+        </div>
+      </div>
+      <div class="member-item-bottom">
+        <button class="btn-approve" onclick="approveMember('${p.id}')">✅ อนุมัติ</button>
+        <button class="btn-reject" onclick="rejectMember('${p.id}')">❌ ไม่อนุมัติ</button>
+      </div>
+    </div>`).join('');
+}
+
+function approveMember(pid) {
+  const pending = getPending();
+  const p = pending.find(x => x.id === pid);
+  if (!p) return;
+  const users = getUsers();
+  users.push({ id: 'u_'+Date.now(), username: p.username, password: p.password, name: p.name, role: 'Admin', avatar: p.avatar, approved: true, isRoot: false });
+  setUsers(users);
+  setPending(pending.filter(x => x.id !== pid));
+  renderMembers();
+  showToast(`✅ อนุมัติ ${p.name} เรียบร้อย`);
+}
+
+function rejectMember(pid) {
+  setPending(getPending().filter(x => x.id !== pid));
+  renderMembers();
+  showToast('❌ ปฏิเสธการสมัครเรียบร้อย');
+}
+
+function renderAllMembers() {
+  const users = getUsers();
+  const container = document.getElementById('all-members-list');
+  const stats = document.getElementById('role-stats');
+  const ceoCount = users.filter(u => u.role === 'CEO').length;
+  const superCount = users.filter(u => u.role === 'SuperAdmin').length;
+  const adminCount = users.filter(u => u.role === 'Admin').length;
+  stats.innerHTML = `
+    <p>👑 CEO ${ceoCount} ท่าน</p>
+    <p>⭐ SuperAdmin ${superCount} ท่าน</p>
+    <p>👤 Admin ${adminCount} ท่าน</p>`;
+  // Sort: self first, then CEO, SuperAdmin, Admin
+  const sortedUsers = [
+    ...users.filter(u => u.id === currentUser.id),
+    ...users.filter(u => u.id !== currentUser.id && u.role === 'CEO'),
+    ...users.filter(u => u.id !== currentUser.id && u.role === 'SuperAdmin'),
+    ...users.filter(u => u.id !== currentUser.id && u.role === 'Admin'),
+  ];
+  container.innerHTML = sortedUsers.map(u => {
+    const isSelf = u.id === currentUser.id;
+    const showPass = canSeePasswordOf(u);
+    const canChangeRole = canChangeRoleOf(u);
+    const canEdit = currentUser.isRoot;
+    const canDelete = canDeleteUser(u);
+    const roleOpts = getRoleOptions(u);
+    return `
+      <div class="all-member-item">
+        <div class="all-member-top">
+          <div>
+            <div class="member-avatar">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div>
+            <div class="member-role-label">${isSelf && u.isRoot ? '👑 บัญชีหลัก' : '👤 บัญชีทั่วไป'}</div>
+          </div>
+          <div class="member-details">
+            <div class="member-info-line"><span class="member-info-label">🚩</span><span>${u.username}</span></div>
+            <div class="member-info-line"><span class="member-info-label">🔤</span><span>${u.name}</span></div>
+            <div class="member-info-line"><span class="member-info-label">🔑</span><span>${showPass ? u.password : '••••••••'}</span></div>
+          </div>
+          ${isSelf ? '<div class="self-label">✨ บัญชีตนเอง</div>' : ''}
+        </div>
+        <hr class="all-member-divider">
+        <div class="all-member-bottom">
+          ${canChangeRole ? `<select class="role-select" onchange="changeRole('${u.id}',this.value)">${roleOpts}</select>` : `<span style="font-size:12px;color:var(--gold-dark);font-weight:600">${u.role}</span>`}
+          ${canEdit ? `<button class="btn-sm btn-sm-edit" onclick="openEditMember('${u.id}')">✏️ แก้ไข</button>` : `<button class="btn-sm btn-sm-edit" style="opacity:0.4;cursor:not-allowed">✏️ แก้ไข</button>`}
+          ${canDelete ? `<button class="btn-sm btn-sm-del" onclick="openDeleteMember('${u.id}')">🗑️ ลบ</button>` : `<button class="btn-sm btn-sm-del" style="opacity:0.4;cursor:not-allowed">🗑️ ลบ</button>`}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function canSeePassword() {
+  return currentUser && (currentUser.role === 'CEO' || currentUser.role === 'SuperAdmin');
+}
+
+function canSeePasswordOf(u) {
+  if (!currentUser) return false;
+  if (currentUser.isRoot) return !u.isRoot || u.id === currentUser.id;
+  if (currentUser.role === 'CEO') return u.role !== 'CEO' || u.id === currentUser.id;
+  return u.id === currentUser.id;
+}
+
+function canChangeRoleOf(u) {
+  if (!currentUser) return false;
+  if (u.isRoot) return false;
+  if (u.id === currentUser.id && !currentUser.isRoot) return false;
+  if (currentUser.isRoot) return u.id !== currentUser.id;
+  if (currentUser.role === 'CEO' && !currentUser.isRoot) {
+    if (u.role === 'CEO') return false;
+    return true;
+  }
+  if (currentUser.role === 'SuperAdmin') {
+    if (u.role === 'CEO' || u.role === 'SuperAdmin') return false;
+    return true;
+  }
+  return false;
+}
+
+function canDeleteUser(u) {
+  if (!currentUser) return false;
+  if (u.id === currentUser.id) return false;
+  if (u.isRoot) return false;
+  if (currentUser.isRoot) return true;
+  if (currentUser.role === 'CEO') return u.role !== 'CEO';
+  if (currentUser.role === 'SuperAdmin') return u.role === 'Admin';
+  return false;
+}
+
+function getRoleOptions(u) {
+  const roles = ['CEO','SuperAdmin','Admin'];
+  return roles.map(r => `<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`).join('');
+}
+
+function changeRole(uid, newRole) {
+  if (!canChangeRoleOf(getUsers().find(u=>u.id===uid))) { showToast('❌ ไม่มีสิทธิ์เปลี่ยนตำแหน่ง'); return; }
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === uid);
+  if (idx < 0) return;
+  users[idx].role = newRole;
+  setUsers(users);
+  renderMembers();
+  showToast(`✅ เปลี่ยนตำแหน่งเรียบร้อย`);
+}
+
+function openDeleteMember(uid) {
+  const users = getUsers();
+  const u = users.find(x => x.id === uid);
+  if (!u) return;
+  document.getElementById('del-member-id').value = uid;
+  document.getElementById('del-member-preview').innerHTML = `
+    <div class="member-avatar" style="width:42px;height:42px;flex-shrink:0">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div>
+    <div><div style="font-size:13px;font-weight:700">${u.name}</div><div style="font-size:12px;color:var(--gray)">${u.username} · ${u.role}</div></div>`;
+  openModal('deleteMemberModal');
+}
+
+function confirmDeleteMember() {
+  const uid = document.getElementById('del-member-id').value;
+  let users = getUsers();
+  users = users.filter(u => u.id !== uid);
+  setUsers(users);
+  closeModal('deleteMemberModal');
+  renderMembers();
+  showToast('🗑️ ลบสมาชิกเรียบร้อย');
+}
+
+function openEditMember(uid) {
+  const users = getUsers();
+  const u = users.find(x => x.id === uid);
+  if (!u) return;
+  document.getElementById('em-id').value = uid;
+  document.getElementById('em-user').value = u.username;
+  document.getElementById('em-name').value = u.name;
+  document.getElementById('em-pass').value = u.password;
+  openModal('editMemberModal');
+}
+
+function saveMemberEdit() {
+  const uid = document.getElementById('em-id').value;
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === uid);
+  if (idx < 0) return;
+  users[idx].username = document.getElementById('em-user').value.trim();
+  users[idx].name = document.getElementById('em-name').value.trim();
+  users[idx].password = document.getElementById('em-pass').value.trim();
+  setUsers(users);
+  closeModal('editMemberModal');
+  renderMembers();
+  showToast('✅ บันทึกเรียบร้อย');
+}
+
+// ======= PROFILE =======
+function renderProfile() {
+  if (!currentUser) return;
+  const users = getUsers();
+  const u = users.find(x => x.id === currentUser.id) || currentUser;
+  const avatarEl = document.getElementById('profile-avatar-display');
+  avatarEl.innerHTML = u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : '👤';
+  const usernameDisplay = document.getElementById('profile-username-display');
+  const usernameEdit = document.getElementById('profile-username-edit');
+  usernameDisplay.textContent = u.username;
+  usernameEdit.value = u.username;
+  if (u.isRoot) { usernameDisplay.classList.add('hidden'); usernameEdit.classList.remove('hidden'); }
+  else { usernameDisplay.classList.remove('hidden'); usernameEdit.classList.add('hidden'); }
+  document.getElementById('profile-name-edit').value = u.name;
+  document.getElementById('profile-password-edit').value = '';
+}
+
+function handleProfileAvatarChange(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('profile-avatar-display').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    document.getElementById('profile-avatar-display').dataset.newAvatar = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function saveProfile() {
+  if (!currentUser) return;
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === currentUser.id);
+  if (idx < 0) return;
+  const newName = document.getElementById('profile-name-edit').value.trim();
+  const newPass = document.getElementById('profile-password-edit').value.trim();
+  const newAvatar = document.getElementById('profile-avatar-display').dataset.newAvatar;
+  if (currentUser.isRoot) {
+    const newUser = document.getElementById('profile-username-edit').value.trim();
+    if (newUser) users[idx].username = newUser;
+  }
+  if (newName) users[idx].name = newName;
+  if (newPass) users[idx].password = newPass;
+  if (newAvatar) users[idx].avatar = newAvatar;
+  setUsers(users);
+  currentUser = users[idx];
+  renderProfile();
+  renderMembers();
+  showToast('✅ บันทึกข้อมูลเรียบร้อย');
+}
+
+// ======= EVENT VIEW =======
+function openEventView(id, mode) {
+  const events = getEvents();
+  const ev = events.find(x => x.id === id);
+  if (!ev) return;
+  currentEventView = id;
+  const coverEl = document.getElementById('ev-cover');
+  coverEl.innerHTML = ev.cover ? `<img src="${ev.cover}" alt="">` : '🖼️';
+  document.getElementById('ev-name').textContent = ev.name;
+  document.getElementById('ev-meta').innerHTML = `
+    <span>🗓️ ${formatDate(ev.date)}</span>
+    <span>🖼️ ${(ev.photos||[]).length} ภาพ</span>
+    <span>👤 ${(ev.photos||[]).length} ใบหน้า</span>`;
+  // Photos
+  const photos = ev.photos || [];
+  const grid = document.getElementById('public-photos-grid');
+  grid.innerHTML = photos.map((ph, i) => `
+    <div class="pub-photo-wrap">
+      <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${id}'),${i},'${id}')">${`<img src="${ph.data}" alt="">`}</div>
+      <div class="pub-tick" id="pub-tick-${ph.id}" onclick="togglePubTick('${ph.id}')"></div>
+      <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${i+1}.jpg')">⬇️</button>
+    </div>`).join('');
+  document.getElementById('event-view').classList.add('active');
+  if (mode === 'public') {
+    document.getElementById('header-section').style.display = 'none';
+    document.getElementById('gold-section').style.display = 'none';
+  } else {
+    document.getElementById('admin-section-3').classList.remove('active');
+  }
+  window.scrollTo({ top: 0 });
+}
+
+function getEventPhotos(id) {
+  const events = getEvents();
+  const ev = events.find(x => x.id === id);
+  return ev ? (ev.photos || []) : [];
+}
+
+function closeEventView() {
+  document.getElementById('event-view').classList.remove('active');
+  if (currentUser) {
+    document.getElementById('admin-section-3').classList.add('active');
+  } else {
+    document.getElementById('header-section').style.display = 'block';
+    document.getElementById('gold-section').style.display = 'block';
+  }
+}
+
+function togglePubTick(pid) {
+  const el = document.getElementById('pub-tick-'+pid);
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
+}
+
+function downloadSelectedPublic() {
+  const checked = document.querySelectorAll('.pub-tick.checked');
+  if (checked.length === 0) { showToast('⚠️ กรุณาเลือกรูปที่ต้องการดาวโหลด'); return; }
+  const events = getEvents();
+  const ev = events.find(x => x.id === currentEventView);
+  if (!ev) return;
+  checked.forEach((el, i) => {
+    const pid = el.id.replace('pub-tick-','');
+    const ph = ev.photos.find(x => x.id === pid);
+    if (ph) setTimeout(() => downloadPhoto(ph.data, `photo_${pid}.jpg`), i * 200);
+  });
+  showToast(`⬇️ ดาวโหลด ${checked.length} ภาพ`);
+}
+
+// ======= REPORT =======
+function openReportModal(photoId, eventId, photo) {
+  document.getElementById('report-photo-id').value = photoId;
+  document.getElementById('report-event-id').value = eventId;
+  const prev = document.getElementById('report-photo-preview');
+  if (photo && photo.data) prev.innerHTML = `<img src="${photo.data}" alt="">`;
+  else prev.innerHTML = '<span style="font-size:48px">🖼️</span>';
+  document.getElementById('report-reason').value = '';
+  openModal('reportModal');
+}
+
+function submitReport() {
+  const pid = document.getElementById('report-photo-id').value;
+  const eid = document.getElementById('report-event-id').value;
+  const reason = document.getElementById('report-reason').value.trim();
+  if (!reason) { showToast('⚠️ กรุณาระบุเหตุผล'); return; }
+  const events = getEvents();
+  const ev = events.find(x => x.id === eid);
+  const ph = ev ? (ev.photos||[]).find(x => x.id === pid) : null;
+  const requests = getRequests();
+  requests.push({ id: 'req_'+Date.now(), photoId: pid, eventId: eid, eventName: ev ? ev.name : '-', photoData: ph ? ph.data : null, reason, date: new Date().toLocaleDateString('th-TH') });
+  setRequests(requests);
+  closeModal('reportModal');
+  updateRequestBadge();
+  showToast('📨 ส่งรายงานเรียบร้อยแล้ว');
+}
+
+function renderRequests() {
+  const requests = getRequests();
+  const container = document.getElementById('request-list');
+  if (requests.length === 0) {
+    container.innerHTML = '<div class="no-items">📭 ไม่มีคำร้อง</div>'; return;
+  }
+  container.innerHTML = requests.map(r => `
+    <div class="request-item" id="req-${r.id}">
+      <div class="request-img">${r.photoData ? `<img src="${r.photoData}" alt="">` : '🖼️'}</div>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <div class="request-details">
+          <p>📁 Event: <strong>${r.eventName}</strong></p>
+          <p>🗓️ วันที่แจ้ง: ${r.date}</p>
+          <p>📝 เหตุผล: ${r.reason}</p>
+        </div>
+        <div class="request-actions">
+          <button class="btn-del-report" onclick="deleteReport('${r.id}')">✅ ลบรายงาน</button>
+          <button class="btn-del-photo" onclick="openDelReportPhoto('${r.id}')">🗑️ ลบรูปภาพ</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function deleteReport(rid) {
+  let requests = getRequests();
+  requests = requests.filter(r => r.id !== rid);
+  setRequests(requests);
+  renderRequests();
+  updateRequestBadge();
+  showToast('✅ ลบรายงานเรียบร้อย');
+}
+
+function openDelReportPhoto(rid) {
+  document.getElementById('del-report-id').value = rid;
+  openModal('delReportPhotoModal');
+}
+
+function confirmDelReportPhoto() {
+  const rid = document.getElementById('del-report-id').value;
+  const requests = getRequests();
+  const r = requests.find(x => x.id === rid);
+  if (!r) return;
+  // Delete photo from event
+  const events = getEvents();
+  const idx = events.findIndex(x => x.id === r.eventId);
+  if (idx >= 0) {
+    events[idx].photos = events[idx].photos.filter(ph => ph.id !== r.photoId);
+    setEvents(events);
+  }
+  // Remove report
+  setRequests(requests.filter(x => x.id !== rid));
+  closeModal('delReportPhotoModal');
+  renderRequests();
+  renderDashboard();
+  updateRequestBadge();
+  showToast('🗑️ ลบรูปภาพเรียบร้อย');
+}
+
+function updateRequestBadge() {
+  const cnt = getRequests().length;
+  const badge = document.getElementById('request-badge');
+  if (cnt > 0) { badge.textContent = cnt; badge.classList.remove('hidden'); }
+  else { badge.classList.add('hidden'); }
+}
+
+// ======= COVER INPUT =======
+function handleCoverInput(input, previewId, dataId) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById(previewId).innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+    document.getElementById(dataId).value = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ======= FACE SEARCH =======
+function handleFaceSearch(input) {
+  if (!input.files[0]) return;
+  showToast('🔍 ระบบค้นหาใบหน้ายังอยู่ระหว่างพัฒนา');
+}
+
+// ======= DOWNLOAD =======
+function downloadPhoto(dataUrl, filename) {
+  // ใช้วิธี fetch รูปมาเป็น blob เพื่อบังคับดาวน์โหลดข้ามโดเมนได้
+  fetch(dataUrl)
+    .then(response => response.blob())
+    .then(blob => {
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl); // ล้างหน่วยความจำ
+    })
+    .catch(() => {
+      // ถ้า fetch ไม่ได้ (เช่นเน็ตหลุด) ให้เปิดในแท็บใหม่แทน
+      window.open(dataUrl, '_blank');
+    });
+}
+
+// ======= MODAL HELPERS =======
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('active');
+  });
+});
+
+// ======= TOAST =======
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ======= FORMAT DATE =======
+function formatDate(d) {
+  if (!d) return '-';
+  try {
+    const date = new Date(d);
+    return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch(e) { return d; }
+}
+</script>
+</body>
+</html>
