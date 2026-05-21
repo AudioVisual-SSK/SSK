@@ -1019,24 +1019,18 @@ async function loadData() {
 let githubToken = localStorage.getItem('tnk_github_token') || '';
 
 // ====== Debounced Save (รวบคำขอใน 1 วิ) ======
-let saveTimeout = null;
-let savePromise = null;
+let cachedSha = null;
+let isSaving = false;
 
-function debouncedSave() {
-  if (saveTimeout) clearTimeout(saveTimeout);
-  // ถ้ามีการเรียกซ้ำภายใน 1 วินาที จะล้างแล้วเริ่มใหม่
-  savePromise = new Promise((resolve, reject) => {
-    saveTimeout = setTimeout(async () => {
-      try {
-        await saveDataToGitHub();
-        resolve();
-      } catch (e) {
-        reject(e);
-      }
-    }, 1000);
-  });
-  return savePromise;
-}
+async function saveDataToGitHub() {
+  if (isSaving) {
+    console.warn('⏳ กำลังบันทึกอยู่แล้ว ข้ามการเรียกซ้ำ');
+    return;
+  }
+  if (!githubToken) {
+    showToast('⚠️ ยังไม่ได้ใส่ GitHub Token');
+    return;
+  }
   isSaving = true;
   const repo = 'thanakon08/tnk-events';
   const path = 'data.json';
@@ -1078,7 +1072,7 @@ function debouncedSave() {
     }
 
     const putData = await putRes.json();
-    cachedSha = putData.content.sha; // อัปเดตแคช (สำหรับการใช้งานอื่น ถ้าจำเป็น)
+    cachedSha = putData.content.sha; // อัปเดตแคช (สำหรับการใช้งานอื่น)
     console.log('✅ อัปเดต data.json สำเร็จ');
   } catch (err) {
     console.error('❌ บันทึกไม่สำเร็จ:', err.message);
@@ -1088,17 +1082,17 @@ function debouncedSave() {
   }
 }
 
+// ส่วน Users และ Pending ยังคงใช้ localStorage (เฉพาะเครื่องแอดมิน)
 function getEvents() { return appData.events; }
 function setEvents(newEvents) {
   appData.events = newEvents;
-  debouncedSave();   // ← ใช้ debounce
+  saveDataToGitHub();
 }
+function getRequests() { return appData.requests; }
 function setRequests(newRequests) {
   appData.requests = newRequests;
-  debouncedSave();   // ← ใช้ debounce
+  saveDataToGitHub();
 }
-
-// ส่วน Users และ Pending ยังคงใช้ localStorage (เฉพาะเครื่องแอดมิน)
 function getUsers() { return DB.get('tnk_users', []); }
 function setUsers(u) { DB.set('tnk_users', u); }
 function getPending() { return DB.get('tnk_pending', []); }
