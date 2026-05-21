@@ -1,4 +1,15 @@
 {
-  "events": [],
+  "events": [
+    {
+      "id": "ev_1779348695011",
+      "name": "A",
+      "date": "",
+      "desc": "",
+      "cover": "",
+      "photos": [],
+      "visible": true,
+      "createdAt": 1779348695011
+    }
+  ],
   "requests": []
 }
