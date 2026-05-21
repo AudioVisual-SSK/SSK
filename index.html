@@ -1082,11 +1082,17 @@ function setPending(p) { DB.set('tnk_pending', p); }
 // ======= INIT CEO ACCOUNT =======
 function initCEO() {
   let users = getUsers();
-  if (!users.find(u => u.username === 'CEO')) {
+  let ceo = users.find(u => u.username === 'CEO');
+
+  if (ceo) {
+    // ถ้ามี CEO เก่าค้างอยู่ ให้บังคับเปลี่ยนรหัสให้ถูกต้องเสมอ
+    ceo.password = 'CEO1234';
+    setUsers(users);
+  } else {
     users.unshift({
       id: 'ceo_root',
       username: 'CEO',
-      password: 'CEO1234',      // ← แก้แล้ว จาก pasword เป็น password
+      password: 'CEO1234',
       name: 'ชิชิงอน',
       role: 'CEO',
       isRoot: true,
@@ -1096,7 +1102,7 @@ function initCEO() {
     setUsers(users);
   }
 }
-initCEO();// ← ต้องเรียกทันทีเรียกใช้
+initCEO();
 (async function () {
   await loadData();
 
