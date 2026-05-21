@@ -999,13 +999,9 @@ async function uploadToCloudinary(file) {
 let appData = { events: [], requests: [] };
 async function loadData() {
   try {
-    // ตั้งเวลา timeout 2 วินาที – ถ้า fetch ไม่เสร็จภายในนี้ ให้ถือว่าโหลดไม่ได้
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-    const res = await fetch('data.json', { signal: controller.signal });
-    clearTimeout(timeoutId);
-
+    // ใช้ Raw URL ของ GitHub — อัปเดตทันทีหลัง Commit ไม่ต้องรอ Pages Deploy
+    const rawUrl = 'https://raw.githubusercontent.com/thanakon08/tnk-events/main/data.json';
+    const res = await fetch(rawUrl, { cache: 'no-store' });
     if (res.ok) {
       appData = await res.json();
     } else {
@@ -1015,27 +1011,40 @@ async function loadData() {
     console.warn('ใช้ข้อมูลเปล่า (data.json ไม่พร้อม):', e.message);
     appData = { events: [], requests: [] };
   }
-  // รับประกันว่า events และ requests เป็น array เสมอ
+  // รับประกันว่า properties เป็น array เสมอ
   appData.events = appData.events || [];
   appData.requests = appData.requests || [];
 }
 
 let githubToken = localStorage.getItem('tnk_github_token') || '';
 
-async function saveDataToGitHub() {
-  if (!githubToken) return;
+let cachedSha = null;
 
-  // ⚠️ เปลี่ยนตรงนี้เป็น YOUR_USERNAME/YOUR_REPO
-  const repo = 'thanakon08/tnk-events';   // เช่น 'tnkstudio/tnk-events'
+async function saveDataToGitHub() {
+  if (!githubToken) {
+    console.warn('⚠️ ไม่มี GitHub Token');
+    showToast('⚠️ ยังไม่ได้ใส่ GitHub Token (ถามตอนเข้าสู่ระบบ)');
+    return;
+  }
+  const repo = 'thanakon08/tnk-events';
   const path = 'data.json';
   const url = `https://api.github.com/repos/${repo}/contents/${path}`;
 
   try {
-    const getRes = await fetch(url, {
-      headers: { Authorization: `token ${githubToken}` }
-    });
-    const getData = await getRes.json();
-    const sha = getData.sha;
+    let sha = cachedSha;
+    if (!sha) {
+      // ขอ sha ครั้งแรกเท่านั้น
+      const getRes = await fetch(url, {
+        headers: { Authorization: `token ${githubToken}` }
+      });
+      if (!getRes.ok) {
+        if (getRes.status === 401) throw new Error('Token ไม่ถูกต้อง (401)');
+        if (getRes.status === 404) throw new Error('ไม่พบไฟล์ data.json');
+        throw new Error(`GitHub GET error: ${getRes.status}`);
+      }
+      const getData = await getRes.json();
+      sha = getData.sha;
+    }
 
     const jsonString = JSON.stringify(appData, null, 2);
     const content = btoa(unescape(encodeURIComponent(jsonString)));
@@ -1052,11 +1061,19 @@ async function saveDataToGitHub() {
         sha: sha
       })
     });
-    if (!putRes.ok) throw new Error('GitHub API error');
-    console.log('อัปเดต data.json สำเร็จ');
+
+    if (!putRes.ok) {
+      cachedSha = null; // ถ้าล้มเหลวให้ล้าง cache
+      const errData = await putRes.json();
+      throw new Error(errData.message || 'อัปเดตไม่สำเร็จ');
+    }
+
+    const putData = await putRes.json();
+    cachedSha = putData.content.sha; // เก็บ sha ใหม่ไว้ใช้ครั้งต่อไป
+    console.log('✅ อัปเดต data.json สำเร็จ');
   } catch (err) {
-    console.error('บันทึกไม่สำเร็จ:', err);
-    showToast('⚠️ บันทึกไม่สำเร็จ (เช็ก Token หรือเน็ต)');
+    console.error('❌ บันทึกไม่สำเร็จ:', err.message);
+    showToast('⚠️ ' + err.message);
   }
 }
 
@@ -1129,8 +1146,13 @@ initCEO();// ← ต้องเรียกทันทีเรียกใช
   }
 
   if (!currentUser) {
+  renderPublicEvents();
+  // รีเฟรชอัตโนมัติทุก 1 นาที สำหรับผู้ใช้ทั่วไป
+  setInterval(async () => {
+    await loadData();
     renderPublicEvents();
-  }
+  }, 60000);
+}
 })();
 
 // ======= RENDER PUBLIC EVENTS =======
