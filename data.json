@@ -1,6 +1,16 @@
 {
   "events": [
     {
+      "id": "ev_1779358733871",
+      "name": "C",
+      "date": "",
+      "desc": "",
+      "cover": "",
+      "photos": [],
+      "visible": true,
+      "createdAt": 1779358733871
+    },
+    {
       "id": "ev_1779358728478",
       "name": "B",
       "date": "",
