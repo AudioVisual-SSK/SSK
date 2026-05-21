@@ -1,24 +1,14 @@
 {
   "events": [
     {
-      "id": "ev_1779348699596",
-      "name": "B",
-      "date": "",
-      "desc": "",
-      "cover": "",
-      "photos": [],
-      "visible": true,
-      "createdAt": 1779348699596
-    },
-    {
-      "id": "ev_1779348695011",
+      "id": "ev_1779349634921",
       "name": "A",
-      "date": "",
+      "date": "2026-05-21",
       "desc": "",
       "cover": "",
       "photos": [],
       "visible": true,
-      "createdAt": 1779348695011
+      "createdAt": 1779349634921
     }
   ],
   "requests": []
