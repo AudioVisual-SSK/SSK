@@ -502,8 +502,6 @@
   .modal-box::-webkit-scrollbar-thumb { background: var(--gold-light); border-radius: 4px; }
 </style>
 </head>
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
 <body>
 
 <!-- ====== PUBLIC HEADER ====== -->
@@ -1082,17 +1080,11 @@ function setPending(p) { DB.set('tnk_pending', p); }
 // ======= INIT CEO ACCOUNT =======
 function initCEO() {
   let users = getUsers();
-  let ceo = users.find(u => u.username === 'CEO');
-
-  if (ceo) {
-    // ถ้ามี CEO เก่าค้างอยู่ ให้บังคับเปลี่ยนรหัสให้ถูกต้องเสมอ
-    ceo.password = 'CEO1234';
-    setUsers(users);
-  } else {
+  if (!users.find(u => u.username === 'CEO')) {
     users.unshift({
       id: 'ceo_root',
       username: 'CEO',
-      password: 'CEO1234',
+      password: 'CEO1234',      // ← แก้แล้ว จาก pasword เป็น password
       name: 'ชิชิงอน',
       role: 'CEO',
       isRoot: true,
@@ -1102,7 +1094,7 @@ function initCEO() {
     setUsers(users);
   }
 }
-initCEO();
+initCEO();// ← ต้องเรียกทันทีเรียกใช้
 (async function () {
   await loadData();
 
