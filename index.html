@@ -985,6 +985,28 @@ async function uploadToCloudinary(file) {
 
 // ---- ใช้ data.json สำหรับ Events/Requests ----
 let appData = { events: [], requests: [] };
+async function loadData() {
+  try {
+    // ตั้งเวลา timeout 2 วินาที – ถ้า fetch ไม่เสร็จภายในนี้ ให้ถือว่าโหลดไม่ได้
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+    const res = await fetch('data.json', { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      appData = await res.json();
+    } else {
+      throw new Error('โหลด data.json ไม่สำเร็จ');
+    }
+  } catch (e) {
+    console.warn('ใช้ข้อมูลเปล่า (data.json ไม่พร้อม):', e.message);
+    appData = { events: [], requests: [] };
+  }
+  // รับประกันว่า events และ requests เป็น array เสมอ
+  appData.events = appData.events || [];
+  appData.requests = appData.requests || [];
+}
 
 let githubToken = localStorage.getItem('tnk_github_token') || '';
 
@@ -1048,13 +1070,14 @@ function initCEO() {
   let users = getUsers();
   if (!users.find(u => u.username === 'CEO')) {
     users.unshift({
-      id: 'ceo_root', username: 'CEO', pasword: 'CEO1234',
+      id: 'ceo_root', username: 'CEO', password: 'CEO1234',  // ← แก้ตรงนี้
       name: 'ชิชิงอน', role: 'CEO', isRoot: true,
       avatar: null, approved: true
     });
     setUsers(users);
   }
 }
+initCEO();  // ← เพิ่มบรรทัดนี้ให้เรียกใช้
 // ---- โหลดข้อมูลกลางก่อน แล้วจึงตัดสินใจแสดง UI ----
 (async function () {
   await loadData();
