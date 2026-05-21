@@ -1019,33 +1019,36 @@ async function loadData() {
 let githubToken = localStorage.getItem('tnk_github_token') || '';
 
 let cachedSha = null;
+let isSaving = false; // ป้องกัน concurrent save
 
 async function saveDataToGitHub() {
-  if (!githubToken) {
-    console.warn('⚠️ ไม่มี GitHub Token');
-    showToast('⚠️ ยังไม่ได้ใส่ GitHub Token (ถามตอนเข้าสู่ระบบ)');
+  if (isSaving) {
+    console.warn('⏳ กำลังบันทึกอยู่แล้ว ข้ามการเรียกซ้ำ');
     return;
   }
+  if (!githubToken) {
+    showToast('⚠️ ยังไม่ได้ใส่ GitHub Token');
+    return;
+  }
+  isSaving = true;
   const repo = 'thanakon08/tnk-events';
   const path = 'data.json';
   const url = `https://api.github.com/repos/${repo}/contents/${path}`;
 
   try {
-    let sha = cachedSha;
-    if (!sha) {
-      // ขอ sha ครั้งแรกเท่านั้น
-      const getRes = await fetch(url, {
-        headers: { Authorization: `token ${githubToken}` }
-      });
-      if (!getRes.ok) {
-        if (getRes.status === 401) throw new Error('Token ไม่ถูกต้อง (401)');
-        if (getRes.status === 404) throw new Error('ไม่พบไฟล์ data.json');
-        throw new Error(`GitHub GET error: ${getRes.status}`);
-      }
-      const getData = await getRes.json();
-      sha = getData.sha;
+    // 1. ดึง SHA ล่าสุดจาก GitHub ทุกครั้ง (ไม่ใช้ cachedSha เพื่อกัน mismatch)
+    const getRes = await fetch(url, {
+      headers: { Authorization: `token ${githubToken}` }
+    });
+    if (!getRes.ok) {
+      if (getRes.status === 401) throw new Error('Token ไม่ถูกต้อง (401)');
+      if (getRes.status === 404) throw new Error('ไม่พบไฟล์ data.json');
+      throw new Error(`GitHub GET error: ${getRes.status}`);
     }
+    const getData = await getRes.json();
+    const sha = getData.sha;
 
+    // 2. PUT ข้อมูล
     const jsonString = JSON.stringify(appData, null, 2);
     const content = btoa(unescape(encodeURIComponent(jsonString)));
 
@@ -1063,17 +1066,18 @@ async function saveDataToGitHub() {
     });
 
     if (!putRes.ok) {
-      cachedSha = null; // ถ้าล้มเหลวให้ล้าง cache
       const errData = await putRes.json();
       throw new Error(errData.message || 'อัปเดตไม่สำเร็จ');
     }
 
     const putData = await putRes.json();
-    cachedSha = putData.content.sha; // เก็บ sha ใหม่ไว้ใช้ครั้งต่อไป
+    cachedSha = putData.content.sha; // อัปเดตแคช (สำหรับการใช้งานอื่น ถ้าจำเป็น)
     console.log('✅ อัปเดต data.json สำเร็จ');
   } catch (err) {
     console.error('❌ บันทึกไม่สำเร็จ:', err.message);
     showToast('⚠️ ' + err.message);
+  } finally {
+    isSaving = false;
   }
 }
 
@@ -1468,21 +1472,20 @@ async function handlePhotoUpload(input) {
 
   let done = 0;
   const total = files.length;
+  const events = getEvents();
+  const evIndex = events.findIndex(e => e.id === id);
 
   for (let i = 0; i < files.length; i++) {
     try {
       const imageUrl = await uploadToCloudinary(files[i]);
-
-      const events = getEvents();
-      const evIndex = events.findIndex(e => e.id === id);
       if (evIndex !== -1) {
         events[evIndex].photos = events[evIndex].photos || [];
         events[evIndex].photos.push({
           id: 'ph_' + Date.now() + '_' + i,
-          data: imageUrl,           // เก็บเฉพาะ URL (ใช้ได้กับ <img src> โดยตรง)
-          cloudinaryUrl: imageUrl   // เก็บแยกไว้หากต้องการใช้ภายหลัง
+          data: imageUrl,
+          cloudinaryUrl: imageUrl
         });
-        setEvents(events);
+        // ❌ ลบ setEvents(events) ที่เคยอยู่ตรงนี้
       }
       done++;
       prog.textContent = `⬆️ อัปโหลดแล้ว ${done}/${total} รูป...`;
@@ -1490,6 +1493,11 @@ async function handlePhotoUpload(input) {
       console.error('Upload error:', err);
       showToast(`❌ รูปที่ ${i+1} ไม่สามารถอัปโหลดได้: ${err.message}`);
     }
+  }
+
+  // ✅ บันทึกข้อมูลทั้งหมดเพียงครั้งเดียว หลังจากอัปโหลดครบ
+  if (done > 0 && evIndex !== -1) {
+    setEvents(events); // ซึ่งจะเรียก saveDataToGitHub() ภายใน
   }
 
   prog.classList.add('hidden');
