@@ -953,6 +953,18 @@ const DB = {
   get: (k, def) => { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : def; } catch(e){ return def; } },
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { showToast('⚠️ พื้นที่จัดเก็บเต็ม กรุณาลบรูปภาพหรือข้อมูลที่ไม่จำเป็น'); console.error('localStorage set error:', e); } }
 };
+// ======= รับประกันว่ามี CEO เสมอ =======
+(function(){
+  let users = JSON.parse(localStorage.getItem('tnk_users') || '[]');
+  if (!users.find(u => u.username === 'CEO' && u.approved)) {
+    users.push({
+      id: 'ceo_root', username: 'CEO', password: 'CEO1234',
+      name: 'ชิชิงอน', role: 'CEO', isRoot: true,
+      avatar: null, approved: true
+    });
+    localStorage.setItem('tnk_users', JSON.stringify(users));
+  }
+})();
 
 // ====== CLOUDINARY CONFIG (เปลี่ยนตรงนี้เป็นของจริงของคุณ!) ======
 const CLOUDINARY_CLOUD_NAME = 'dbo8prouq';        // ← ใส่ Cloud Name ของคุณ
