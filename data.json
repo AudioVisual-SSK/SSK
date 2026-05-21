@@ -16,9 +16,19 @@
           "id": "ph_1779378924165_1",
           "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779378923/izkixun1jhj58d7hb0gi.jpg",
           "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779378923/izkixun1jhj58d7hb0gi.jpg"
+        },
+        {
+          "id": "ph_1779379061688_0",
+          "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779379061/piv6qxwbkqbtr46cq99g.jpg",
+          "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779379061/piv6qxwbkqbtr46cq99g.jpg"
+        },
+        {
+          "id": "ph_1779379062916_1",
+          "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779379062/vuqltxfvrlhkrswrhoby.jpg",
+          "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779379062/vuqltxfvrlhkrswrhoby.jpg"
         }
       ],
-      "visible": false,
+      "visible": true,
       "createdAt": 1779378590918
     },
     {
