@@ -1000,7 +1000,7 @@ let appData = { events: [], requests: [] };
 async function loadData() {
   try {
     // ใช้ Raw URL ของ GitHub — อัปเดตทันทีหลัง Commit ไม่ต้องรอ Pages Deploy
-    const rawUrl = 'https://raw.githubusercontent.com/thanakon08/tnk-events/main/data.json';
+    const rawUrl = 'https://raw.githubusercontent.com/thanakon08/tnk-events/main/data.json?_=' + Date.now();
     const res = await fetch(rawUrl, { cache: 'no-store' });
     if (res.ok) {
       appData = await res.json();
@@ -1018,18 +1018,25 @@ async function loadData() {
 
 let githubToken = localStorage.getItem('tnk_github_token') || '';
 
-let cachedSha = null;
-let isSaving = false; // ป้องกัน concurrent save
+// ====== Debounced Save (รวบคำขอใน 1 วิ) ======
+let saveTimeout = null;
+let savePromise = null;
 
-async function saveDataToGitHub() {
-  if (isSaving) {
-    console.warn('⏳ กำลังบันทึกอยู่แล้ว ข้ามการเรียกซ้ำ');
-    return;
-  }
-  if (!githubToken) {
-    showToast('⚠️ ยังไม่ได้ใส่ GitHub Token');
-    return;
-  }
+function debouncedSave() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  // ถ้ามีการเรียกซ้ำภายใน 1 วินาที จะล้างแล้วเริ่มใหม่
+  savePromise = new Promise((resolve, reject) => {
+    saveTimeout = setTimeout(async () => {
+      try {
+        await saveDataToGitHub();
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    }, 1000);
+  });
+  return savePromise;
+}
   isSaving = true;
   const repo = 'thanakon08/tnk-events';
   const path = 'data.json';
@@ -1084,12 +1091,11 @@ async function saveDataToGitHub() {
 function getEvents() { return appData.events; }
 function setEvents(newEvents) {
   appData.events = newEvents;
-  saveDataToGitHub();
+  debouncedSave();   // ← ใช้ debounce
 }
-function getRequests() { return appData.requests; }
 function setRequests(newRequests) {
   appData.requests = newRequests;
-  saveDataToGitHub();
+  debouncedSave();   // ← ใช้ debounce
 }
 
 // ส่วน Users และ Pending ยังคงใช้ localStorage (เฉพาะเครื่องแอดมิน)
@@ -2087,6 +2093,27 @@ function formatDate(d) {
     return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
   } catch(e) { return d; }
 }
+// ====== รีเฟรชอัตโนมัติสำหรับผู้ใช้ทั่วไป ======
+window.__autoRefreshTimer = null;
+
+function startPublicAutoRefresh() {
+  if (window.__autoRefreshTimer) clearInterval(window.__autoRefreshTimer);
+  if (currentUser) return; // ถ้าเป็นแอดมิน ไม่ต้องรีเฟรช
+  window.__autoRefreshTimer = setInterval(async () => {
+    if (!currentUser) {
+      try {
+        await loadData();
+        renderPublicEvents();
+        console.log('🔄 รีเฟรชอัตโนมัติสำเร็จ');
+      } catch(e) {
+        console.warn('รีเฟรชอัตโนมัติล้มเหลว:', e.message);
+      }
+    }
+  }, 30000); // ทุก 30 วินาที
+}
+
+// เริ่มเมื่อหน้าเว็บโหลด
+document.addEventListener('DOMContentLoaded', startPublicAutoRefresh);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>eruda.init();
