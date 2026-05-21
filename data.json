@@ -18,24 +18,14 @@
           "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779354206/xuyjxolzoyu5rqwzgwqi.jpg"
         },
         {
-          "id": "ph_1779356478326_0",
-          "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779356478/rhgtrkd8oumszqe57hkm.jpg",
-          "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779356478/rhgtrkd8oumszqe57hkm.jpg"
+          "id": "ph_1779358392185_0",
+          "data": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779358392/cgiqpekevwyxdi0lmblx.jpg",
+          "cloudinaryUrl": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779358392/cgiqpekevwyxdi0lmblx.jpg"
         }
       ],
       "visible": true,
       "createdAt": 1779351275016
     }
   ],
-  "requests": [
-    {
-      "id": "req_1779358367308",
-      "photoId": "ph_1779356478326_0",
-      "eventId": "ev_1779351275016",
-      "eventName": "งานแต่ง",
-      "photoData": "https://res.cloudinary.com/dbo8prouq/image/upload/v1779356478/rhgtrkd8oumszqe57hkm.jpg",
-      "reason": ".",
-      "date": "21/5/2569"
-    }
-  ]
+  "requests": []
 }
