@@ -1,16 +1,6 @@
 {
   "events": [
     {
-      "id": "ev_1779367762048",
-      "name": "A",
-      "date": "",
-      "desc": "",
-      "cover": "",
-      "photos": [],
-      "visible": true,
-      "createdAt": 1779367762048
-    },
-    {
       "id": "ev_1779351275016",
       "name": "งานแต่ง",
       "date": "2026-05-21",
