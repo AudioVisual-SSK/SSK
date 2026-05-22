@@ -1122,6 +1122,14 @@ window.startTNK = function() {
 if (window.firebaseReady) window.startTNK();
 
 // ====== RENDER ======
+// ใช้แสดงรูปขนาดย่อ (ประหยัด Bandwidth) แต่เก็บต้นฉบับไว้สำหรับดาวน์โหลด
+function getDisplayUrl(originalUrl) {
+  if (!originalUrl || !originalUrl.includes('res.cloudinary.com')) return originalUrl;
+  const parts = originalUrl.split('/upload/');
+  if (parts.length !== 2) return originalUrl;
+  // ใส่ q_auto,f_auto เพื่อให้ Cloudinary บีบอัดให้โดยอัตโนมัติ
+  return parts[0] + '/upload/q_auto,f_auto/' + parts[1];
+}
 function getEvents() { return appData.events; }
 function getRequests() { return appData.requests; }
 
@@ -1139,7 +1147,7 @@ function renderPublicEvents() {
   } else {
     container.innerHTML = `<div class="events-list">${events.map(e => `
       <div class="event-card" onclick="openEventView('${e.id}','public')">
-        <div class="event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
+        <div class="event-cover">${e.cover ? `<img src="${getDisplayUrl(e.cover)}" alt="">` : '🖼️'}</div>
         <div class="event-info">
           <div style="text-align: center;">
             <div class="event-name">${e.name}</div>
@@ -1170,7 +1178,7 @@ function renderAdminHomeEvents() {
   }
   container.innerHTML = `<div class="events-list">${events.map(e => `
     <div class="event-card" onclick="openEventView('${e.id}','admin-home')">
-      <div class="event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
+      <div class="event-cover">${e.cover ? `<img src="${getDisplayUrl(e.cover)}" alt="">` : '🖼️'}</div>
       <div class="event-info">
         <div style="text-align: center;">
           <div class="event-name">${e.name}</div>
@@ -1448,7 +1456,7 @@ function openEventListModal() {
   });
   grid.innerHTML = sortedEvents.map(e => `
     <div class="event-list-item" onclick="jumpToEvent('${e.id}')">
-      <div class="event-list-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
+      <div class="event-list-cover">${e.cover ? `<img src="${getDisplayUrl(e.cover)}" alt="">` : '🖼️'}</div>
       <div class="event-list-info">
         <div class="event-list-name">${e.name}</div>
         <div class="event-list-date">🗓️ ${formatDate(e.date)}</div>
@@ -1532,6 +1540,28 @@ function deleteCheckedPhotos() {
   saveEventToFirestore(events[idx]);
   openPhotosModal(id);
   showToast(`🗑️ ลบ ${toDelete.length} รูปแล้ว`);
+}
+// เปิด Modal แสดงรูปภาพใน Event (ใช้ getDisplayUrl เพื่อประหยัดแบนด์วิดท์)
+function openPhotosModal(id) {
+  document.getElementById('photos-event-id').value = id;
+  const ev = getEvents().find(x => x.id === id);
+  const photos = ev ? (ev.photos || []) : [];
+  const grid = document.getElementById('photos-grid');
+
+  if (!photos.length) {
+    grid.innerHTML = '<div class="no-items">ยังไม่มีรูปภาพ</div>';
+  } else {
+    grid.innerHTML = photos.map((ph, i) => `
+      <div class="photo-thumb-wrap" id="phtw-${ph.id}">
+        <div class="photo-thumb" onclick="openLightboxAdmin('${id}',${i})">
+          ${`<img src="${getDisplayUrl(ph.data)}" alt="">`}
+        </div>
+        <div class="photo-tick" id="tick-${ph.id}" onclick="togglePhotoTick('${ph.id}')"></div>
+        <button class="photo-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${i+1}.jpg')">⬇️</button>
+      </div>
+    `).join('');
+  }
+  openModal('photosModal');
 }
 
 // ====== LIGHTBOX ======
@@ -1735,6 +1765,46 @@ function closeEventView() {
   document.getElementById('event-view').classList.remove('active');
   if (currentUser) document.getElementById('admin-section-3').classList.add('active');
   else { document.getElementById('header-section').style.display = 'block'; document.getElementById('gold-section').style.display = 'block'; renderPublicEvents(); }
+}
+// เปิดหน้า Event View (ดูรูปทั้งหมด) – ใช้ getDisplayUrl สำหรับปกและรูป
+function openEventView(id, mode) {
+  const ev = getEvents().find(x => x.id === id);
+  if (!ev) return;
+  currentEventView = id;
+
+  // รูปปก
+  document.getElementById('ev-cover').innerHTML = ev.cover
+    ? `<img src="${getDisplayUrl(ev.cover)}" alt="">`
+    : '🖼️';
+
+  document.getElementById('ev-name').textContent = ev.name;
+  document.getElementById('ev-meta').innerHTML = `
+    <span>🗓️ ${formatDate(ev.date)}</span>
+    <span>🖼️ ${(ev.photos||[]).length} ภาพ</span>
+  `;
+
+  // รูปภาพทั้งหมดใน Event
+  const grid = document.getElementById('public-photos-grid');
+  grid.innerHTML = (ev.photos||[]).map((ph, i) => `
+    <div class="pub-photo-wrap">
+      <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${id}'),${i},'${id}')">
+        <img src="${getDisplayUrl(ph.data)}" alt="">
+      </div>
+      <div class="pub-tick" id="pub-tick-${ph.id}" onclick="togglePubTick('${ph.id}')"></div>
+      <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${i+1}.jpg')">⬇️</button>
+    </div>
+  `).join('');
+
+  document.getElementById('event-view').classList.add('active');
+
+  // จัดการการแสดงผล header
+  if (mode === 'public') {
+    document.getElementById('header-section').style.display = 'none';
+    document.getElementById('gold-section').style.display = 'none';
+  } else {
+    document.getElementById('admin-section-3').classList.remove('active');
+  }
+  window.scrollTo({ top: 0 });
 }
 function togglePubTick(pid) { const el = document.getElementById('pub-tick-'+pid); el.classList.toggle('checked'); el.textContent = el.classList.contains('checked') ? '✓' : ''; }
 function downloadSelectedPublic() {
