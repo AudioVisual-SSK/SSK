@@ -937,13 +937,43 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Firebase SDK (ต้องโหลดก่อน) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBWntP6GH2pCDwc2pVyUhF4cm7QwUumh0w",
+    authDomain: "tnk-events-d1983.firebaseapp.com",
+    projectId: "tnk-events-d1983",
+    storageBucket: "tnk-events-d1983.firebasestorage.app",
+    messagingSenderId: "690992959407",
+    appId: "1:690992959407:web:1e52c321c67ddf5289695a"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // ทำให้ใช้จาก global scope ได้
+  window.db = db;
+  window.collection = collection;
+  window.onSnapshot = onSnapshot;
+  window.doc = doc;
+  window.setDoc = setDoc;
+  window.deleteDoc = deleteDoc;
+  window.serverTimestamp = serverTimestamp;
+
+  // ส่งสัญญาณว่า Firebase พร้อมแล้ว
+  window.firebaseReady = true;
+  if (window.startTNK) window.startTNK();
+</script>
 <script>
 // ======= STATE =======
 let currentUser = null;
 let regAvatarData = null;
 let lightboxPhotos = [];
 let lightboxIndex = 0;
-let lightboxMode = ''; // 'admin' or 'public'
+let lightboxMode = '';
 let lightboxEventId = null;
 let lightboxPhotoId = null;
 let currentEventView = null;
@@ -951,241 +981,237 @@ let currentEventView = null;
 // ======= STORAGE =======
 const DB = {
   get: (k, def) => { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : def; } catch(e){ return def; } },
-  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { showToast('⚠️ พื้นที่จัดเก็บเต็ม กรุณาลบรูปภาพหรือข้อมูลที่ไม่จำเป็น'); console.error('localStorage set error:', e); } }
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { showToast('⚠️ พื้นที่เต็ม'); } }
 };
-// ======= รับประกันว่ามี CEO เสมอ =======
+
+// ====== รับประกัน CEO ======
 (function(){
   let users = JSON.parse(localStorage.getItem('tnk_users') || '[]');
   if (!users.find(u => u.username === 'CEO' && u.approved)) {
     users.push({
       id: 'ceo_root', username: 'CEO', password: 'CEO1234',
-      name: 'ชิชิงอน', role: 'CEO', isRoot: true,
-      avatar: null, approved: true
+      name: 'ชิชิงอน', role: 'CEO', isRoot: true, avatar: null, approved: true
     });
     localStorage.setItem('tnk_users', JSON.stringify(users));
   }
 })();
 
-// ====== CLOUDINARY CONFIG (เปลี่ยนตรงนี้เป็นของจริงของคุณ!) ======
-const CLOUDINARY_CLOUD_NAME = 'dbo8prouq';        // ← ใส่ Cloud Name ของคุณ
-const CLOUDINARY_UPLOAD_PRESET = 'tnk_upload';  // ← ใส่ Upload Preset ของคุณ
+// ====== CLOUDINARY ======
+const CLOUDINARY_CLOUD_NAME = 'dbo8prouq';
+const CLOUDINARY_UPLOAD_PRESET = 'tnk_upload';
 
-/**
- * อัพโหลดไฟล์รูปไป Cloudinary แล้วคืน URL ของรูปที่อัพโหลดสำเร็จ
- * @param {File} file - ไฟล์รูปจาก input
- * @returns {Promise<string>} - secure_url ของรูป
- */
 async function uploadToCloudinary(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-    const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        {
-            method: 'POST',
-            body: formData
-        }
-    );
-
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.error?.message || 'Upload failed');
-    }
-    return data.secure_url;  // URL สำหรับแสดงรูป
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method:'POST', body:fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Upload failed');
+    return data.secure_url;
 }
 
-// ---- ใช้ data.json สำหรับ Events/Requests ----
+// ====== APP DATA (Firestore) ======
 let appData = { events: [], requests: [] };
-async function loadData() {
-  try {
-    // ใช้ Raw URL ของ GitHub — อัปเดตทันทีหลัง Commit ไม่ต้องรอ Pages Deploy
-    const rawUrl = 'https://raw.githubusercontent.com/thanakon08/tnk-events/main/data.json?_=' + Date.now();
-    const res = await fetch(rawUrl, { cache: 'no-store' });
-    if (res.ok) {
-      appData = await res.json();
+
+function initFirestoreListeners() {
+  if (!window.db) { console.warn('Firebase ยังไม่พร้อม'); return; }
+  const { collection, onSnapshot } = window;
+
+  onSnapshot(collection(window.db, "events"), (snapshot) => {
+    const events = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      events.push({ id: docSnap.id, ...data });
+    });
+    appData.events = events;
+    if (currentUser) {
+      renderAdminHomeEvents();
+      renderDashboard();
     } else {
-      throw new Error('โหลด data.json ไม่สำเร็จ');
+      renderPublicEvents();
     }
-  } catch (e) {
-    console.warn('ใช้ข้อมูลเปล่า (data.json ไม่พร้อม):', e.message);
-    appData = { events: [], requests: [] };
-  }
-  // รับประกันว่า properties เป็น array เสมอ
-  appData.events = appData.events || [];
-  appData.requests = appData.requests || [];
+  });
+
+  onSnapshot(collection(window.db, "requests"), (snapshot) => {
+    const requests = [];
+    snapshot.forEach((docSnap) => {
+      requests.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    appData.requests = requests;
+    updateRequestBadge();
+    if (currentUser) renderRequests();
+  });
 }
 
-let githubToken = localStorage.getItem('tnk_github_token') || '';
-
-// ====== Debounced Save (รวบคำขอใน 1 วิ) ======
-let cachedSha = null;
-let isSaving = false;
-
-async function saveDataToGitHub() {
-  if (isSaving) {
-    console.warn('⏳ กำลังบันทึกอยู่แล้ว ข้ามการเรียกซ้ำ');
-    return;
-  }
-  if (!githubToken) {
-    showToast('⚠️ ยังไม่ได้ใส่ GitHub Token');
-    return;
-  }
-  isSaving = true;
-  const repo = 'thanakon08/tnk-events';
-  const path = 'data.json';
-  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
-
+async function saveEventToFirestore(event) {
+  if (!window.db) { showToast('⚠️ Firebase ยังไม่พร้อม'); return; }
   try {
-    // 1. ดึง SHA ล่าสุดจาก GitHub ทุกครั้ง (ไม่ใช้ cachedSha เพื่อกัน mismatch)
-    const getRes = await fetch(url, {
-      headers: { Authorization: `token ${githubToken}` }
+    await window.setDoc(window.doc(window.db, "events", event.id), {
+      name: event.name,
+      date: event.date,
+      desc: event.desc || '',
+      cover: event.cover || '',
+      photos: event.photos || [],
+      visible: event.visible !== false,
+      createdAt: event.createdAt || window.serverTimestamp()
     });
-    if (!getRes.ok) {
-      if (getRes.status === 401) throw new Error('Token ไม่ถูกต้อง (401)');
-      if (getRes.status === 404) throw new Error('ไม่พบไฟล์ data.json');
-      throw new Error(`GitHub GET error: ${getRes.status}`);
-    }
-    const getData = await getRes.json();
-    const sha = getData.sha;
+  } catch (err) { showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message); }
+}
 
-    // 2. PUT ข้อมูล
-    const jsonString = JSON.stringify(appData, null, 2);
-    const content = btoa(unescape(encodeURIComponent(jsonString)));
+async function deleteEventFromFirestore(eventId) {
+  if (!window.db) { showToast('⚠️ Firebase ยังไม่พร้อม'); return; }
+  try { await window.deleteDoc(window.doc(window.db, "events", eventId)); }
+  catch (err) { showToast('⚠️ ลบไม่สำเร็จ: ' + err.message); }
+}
 
-    const putRes = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        Authorization: `token ${githubToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        message: 'Update data.json',
-        content: content,
-        sha: sha
-      })
+async function saveEventToFirestore(event) {
+  if (!window.db) { showToast('⚠️ Firebase ยังไม่พร้อม'); return; }
+  try {
+    await window.setDoc(window.doc(window.db, "events", event.id), {
+      name: event.name,
+      date: event.date,
+      desc: event.desc || '',
+      cover: event.cover || '',
+      photos: event.photos || [],
+      visible: event.visible !== false,
+      createdAt: event.createdAt || window.serverTimestamp()
     });
-
-    if (!putRes.ok) {
-      const errData = await putRes.json();
-      throw new Error(errData.message || 'อัปเดตไม่สำเร็จ');
-    }
-
-    const putData = await putRes.json();
-    cachedSha = putData.content.sha; // อัปเดตแคช (สำหรับการใช้งานอื่น)
-    console.log('✅ อัปเดต data.json สำเร็จ');
+    console.log('✅ บันทึก Event ลง Firestore สำเร็จ');
   } catch (err) {
-    console.error('❌ บันทึกไม่สำเร็จ:', err.message);
-    showToast('⚠️ ' + err.message);
-  } finally {
-    isSaving = false;
+    console.error('❌ บันทึก Event ไม่สำเร็จ:', err);
+    showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
   }
 }
 
-// ส่วน Users และ Pending ยังคงใช้ localStorage (เฉพาะเครื่องแอดมิน)
-function getEvents() { return appData.events; }
-function setEvents(newEvents) {
-  appData.events = newEvents;
-  saveDataToGitHub();
+async function deleteEventFromFirestore(eventId) {
+  if (!window.db) { showToast('⚠️ Firebase ยังไม่พร้อม'); return; }
+  try {
+    await window.deleteDoc(window.doc(window.db, "events", eventId));
+    console.log('🗑️ ลบ Event จาก Firestore สำเร็จ');
+  } catch (err) {
+    console.error('❌ ลบ Event ไม่สำเร็จ:', err);
+    showToast('⚠️ ลบไม่สำเร็จ: ' + err.message);
+  }
 }
-function getRequests() { return appData.requests; }
-function setRequests(newRequests) {
-  appData.requests = newRequests;
-  saveDataToGitHub();
+
+async function saveRequestToFirestore(request) {
+  if (!window.db) return;
+  try {
+    await window.setDoc(window.doc(window.db, "requests", request.id), {
+      ...request,
+      createdAt: window.serverTimestamp()
+    });
+  } catch (err) {
+    console.error('❌ บันทึก Request ไม่สำเร็จ:', err);
+  }
 }
+
+// ====== USERS & PENDING (localStorage) ======
 function getUsers() { return DB.get('tnk_users', []); }
 function setUsers(u) { DB.set('tnk_users', u); }
 function getPending() { return DB.get('tnk_pending', []); }
 function setPending(p) { DB.set('tnk_pending', p); }
 
-// ======= INIT CEO ACCOUNT =======
+// ====== INIT CEO ======
 function initCEO() {
   let users = getUsers();
   if (!users.find(u => u.username === 'CEO')) {
     users.unshift({
-      id: 'ceo_root',
-      username: 'CEO',
-      password: 'CEO1234',      // ← แก้แล้ว จาก pasword เป็น password
-      name: 'ชิชิงอน',
-      role: 'CEO',
-      isRoot: true,
-      avatar: null,
-      approved: true
+      id: 'ceo_root', username: 'CEO', password: 'CEO1234',
+      name: 'ชิชิงอน', role: 'CEO', isRoot: true,
+      avatar: null, approved: true
     });
     setUsers(users);
   }
 }
-initCEO();// ← ต้องเรียกทันทีเรียกใช้
-(async function () {
-  await loadData();
+initCEO();
 
-  const saved = DB.get('tnk_saved_login', null);
-  if (saved) {
-    const users = getUsers();
-    const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
-    if (user) {
-      currentUser = user;
-      await showAdminView();
-      return;
+// ====== เริ่มต้นระบบเมื่อ Firebase พร้อม ======
+window.startTNK = function() {
+  initFirestoreListeners();
+
+  (async function(){
+    const saved = DB.get('tnk_saved_login', null);
+    if (saved) {
+      const users = getUsers();
+      const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
+      if (user) { currentUser = user; await showAdminView(); return; }
     }
-  }
+    if (!currentUser) renderPublicEvents();
+  })();
+};
 
-  if (!currentUser) {
-    renderPublicEvents();
-  }
-})();
-// ---- โหลดข้อมูลกลางก่อน แล้วจึงตัดสินใจแสดง UI ----
-(async function () {
-  await loadData();
+// ถ้า Firebase พร้อมก่อน ให้เรียก startTNK ทันที
+if (window.firebaseReady) window.startTNK();
 
-  const saved = DB.get('tnk_saved_login', null);
-  if (saved) {
-    const users = getUsers();
-    const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
-    if (user) {
-      currentUser = user;
-      await showAdminView();
-      return;
-    }
-  }
+// ====== RENDER ======
+function getEvents() { return appData.events; }
+function getRequests() { return appData.requests; }
 
-  if (!currentUser) {
-  renderPublicEvents();
-  // รีเฟรชอัตโนมัติทุก 1 นาที สำหรับผู้ใช้ทั่วไป
-  setInterval(async () => {
-    await loadData();
-    renderPublicEvents();
-  }, 60000);
+// ====== USERS & PENDING (localStorage) ======
+function getUsers() { return DB.get('tnk_users', []); }
+function setUsers(u) { DB.set('tnk_users', u); }
+function getPending() { return DB.get('tnk_pending', []); }
+function setPending(p) { DB.set('tnk_pending', p); }
+
+// ====== INIT CEO ======
+function initCEO() {
+  let users = getUsers();
+  if (!users.find(u => u.username === 'CEO')) {
+    users.unshift({
+      id: 'ceo_root', username: 'CEO', password: 'CEO1234',
+      name: 'ชิชิงอน', role: 'CEO', isRoot: true,
+      avatar: null, approved: true
+    });
+    setUsers(users);
+  }
 }
-})();
+initCEO();
 
-// ======= RENDER PUBLIC EVENTS =======
-function renderPublicEvents() {
-  const events = getEvents().filter(e => e.visible);
-  const container = document.getElementById('public-events-list');
-  if (events.length === 0) {
-    container.innerHTML = `<div class="no-event-msg"><div class="icon">🌟</div><p>ยังไม่มี EVENT ให้รับชม</p></div>`;
-    return;
+// ====== เริ่มต้นระบบเมื่อ Firebase พร้อม ======
+window.startTNK = function() {
+  initFirestoreListeners();
+  const saved = DB.get('tnk_saved_login', null);
+  if (saved) {
+    const users = getUsers();
+    const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
+    if (user) { currentUser = user; showAdminView(); return; }
   }
-  container.innerHTML = `<div class="events-list">${events.map(e => `
-    <div class="event-card" onclick="openEventView('${e.id}','public')">
-      <div class="event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
-      <div class="event-info">
-        <div class="event-name">${e.name}</div>
-        <div class="event-meta">
-          <span>🗓️ ${formatDate(e.date)}</span>
-          <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
-          <span>👤 ${(e.photos||[]).length} ใบหน้า</span>
+  if (!currentUser) renderPublicEvents();
+};
+if (window.firebaseReady) window.startTNK();
+
+// ====== RENDER ======
+function getEvents() { return appData.events; }
+function getRequests() { return appData.requests; }
+
+function renderPublicEvents() {
+  const events = getEvents().filter(e => e.visible !== false);
+  const container = document.getElementById('public-events-list');
+  if (!events.length) {
+    container.innerHTML = `<div class="no-event-msg"><div class="icon">🌟</div><p>ยังไม่มี EVENT ให้รับชม</p></div>`;
+  } else {
+    container.innerHTML = `<div class="events-list">${events.map(e => `
+      <div class="event-card" onclick="openEventView('${e.id}','public')">
+        <div class="event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
+        <div class="event-info">
+          <div class="event-name">${e.name}</div>
+          <div class="event-meta">
+            <span>🗓️ ${formatDate(e.date)}</span>
+            <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
+          </div>
         </div>
-      </div>
-    </div>`).join('')}
-  </div>`;
+      </div>`).join('')}
+    </div>`;
+  }
+  const refreshContainer = document.getElementById('refresh-container');
+  if (refreshContainer) refreshContainer.style.display = 'block';
 }
 
 function renderAdminHomeEvents() {
-  const events = getEvents().filter(e => e.visible);
+  const events = getEvents().filter(e => e.visible !== false);
   const container = document.getElementById('admin-home-events');
-  if (events.length === 0) {
+  if (!events.length) {
     container.innerHTML = `<div class="no-event-msg"><div class="icon">🌟</div><p>ยังไม่มี EVENT ให้รับชม</p></div>`;
     return;
   }
@@ -1197,44 +1223,33 @@ function renderAdminHomeEvents() {
         <div class="event-meta">
           <span>🗓️ ${formatDate(e.date)}</span>
           <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
-          <span>👤 ${(e.photos||[]).length} ใบหน้า</span>
         </div>
       </div>
     </div>`).join('')}
   </div>`;
 }
 
-// ======= LOGIN =======
+// ====== LOGIN / REGISTER ======
 function doLogin() {
   const u = document.getElementById('login-user').value.trim();
   const p = document.getElementById('login-pass').value.trim();
   const rem = document.getElementById('remember-me').checked;
   if (!u || !p) { showToast('⚠️ กรุณากรอกข้อมูลให้ครบ'); return; }
   const users = getUsers();
-  // ถ้ายังไม่มี CEO ให้สร้างทันที
-  if (!users.find(u => u.username === 'CEO' && u.approved)) {
-  users.push({ id:'ceo_root', username:'CEO', password:'CEO1234', name:'ชิชิงอน', role:'CEO', isRoot:true, avatar:null, approved:true });
-  setUsers(users);
-}
+  if (!users.find(x => x.username === 'CEO' && x.approved)) {
+    users.push({ id:'ceo_root', username:'CEO', password:'CEO1234', name:'ชิชิงอน', role:'CEO', isRoot:true, avatar:null, approved:true });
+    setUsers(users);
+  }
   const user = users.find(x => x.username === u && x.password === p);
   if (!user) { showToast('❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); return; }
-  if (!user.approved) { showToast('⏳ บัญชียังไม่ได้รับการอนุมัติ'); return; }
+  if (!user.approved) { showToast('⏳ บัญชีไม่ได้รับการอนุมัติ'); return; }
   currentUser = user;
   if (rem) DB.set('tnk_saved_login', { u, p });
-  // ถ้าเป็นแอดมินและยังไม่มี Token → ให้ถาม
-if (!githubToken) {
-  githubToken = prompt('🔐 กรุณาวาง GitHub Personal Access Token (repo scope) เพื่อให้ระบบบันทึกข้อมูลกลางได้:');
-  if (githubToken) {
-    localStorage.setItem('tnk_github_token', githubToken);
-    showToast('✅ Token ถูกบันทึกไว้ในเครื่องนี้แล้ว');
-  }
-}
   closeModal('loginModal');
   showAdminView();
   showToast(`✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ${user.name}`);
 }
 
-// ======= REGISTER =======
 function doRegister() {
   const u = document.getElementById('reg-user').value.trim();
   const p = document.getElementById('reg-pass').value.trim();
@@ -1242,9 +1257,9 @@ function doRegister() {
   if (!u || !p || !n) { showToast('⚠️ กรุณากรอกข้อมูลให้ครบ'); return; }
   if (!regAvatarData) { showToast('⚠️ กรุณาเลือกรูปโปรไฟล์'); return; }
   const users = getUsers();
-  if (users.find(x => x.username === u)) { showToast('❌ ชื่อผู้ใช้งานนี้มีอยู่แล้ว'); return; }
+  if (users.find(x => x.username === u)) { showToast('❌ ชื่อผู้ใช้ซ้ำ'); return; }
   const pending = getPending();
-  if (pending.find(x => x.username === u)) { showToast('❌ ชื่อผู้ใช้งานนี้รอการอนุมัติอยู่'); return; }
+  if (pending.find(x => x.username === u)) { showToast('❌ รออนุมัติอยู่'); return; }
   pending.push({ id: 'p_'+Date.now(), username: u, password: p, name: n, avatar: regAvatarData, role: 'Admin' });
   setPending(pending);
   regAvatarData = null;
@@ -1266,18 +1281,18 @@ function handleRegAvatar(input) {
   reader.readAsDataURL(input.files[0]);
 }
 
-// ======= SHOW ADMIN VIEW =======
+// ====== SHOW ADMIN VIEW ======
 async function showAdminView() {
-  await loadData();   // โหลดข้อมูลล่าสุดก่อน
   document.getElementById('header-section').style.display = 'none';
   document.getElementById('gold-section').style.display = 'none';
   document.getElementById('admin-header').classList.add('active');
   document.getElementById('admin-divider').style.display = 'block';
   document.getElementById('admin-section-2').classList.add('active');
   document.getElementById('admin-section-3').classList.add('active');
-  // Role display
   const roleMap = { CEO:'👑 CEO', SuperAdmin:'⭐ SuperAdmin', Admin:'👤 Admin' };
   document.getElementById('role-display').textContent = roleMap[currentUser.role] || '👤 Admin';
+  const refreshContainer = document.getElementById('refresh-container');
+  if (refreshContainer) refreshContainer.style.display = 'none';
   switchTab('home', document.querySelector('.nav-btn'));
   renderAdminHomeEvents();
   renderDashboard();
@@ -1302,11 +1317,9 @@ function doLogout() {
 
 function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-// ======= TAB SWITCH =======
+// ====== TAB SWITCH ======
 function switchTab(tab, btn) {
-  ['home','dashboard','request','member','profile'].forEach(t => {
-    document.getElementById('tab-'+t).classList.add('hidden');
-  });
+  ['home','dashboard','request','member','profile'].forEach(t => document.getElementById('tab-'+t).classList.add('hidden'));
   document.getElementById('tab-'+tab).classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
@@ -1317,13 +1330,13 @@ function switchTab(tab, btn) {
   if (tab === 'profile') renderProfile();
 }
 
-// ======= DASHBOARD =======
+// ====== DASHBOARD ======
 function renderDashboard() {
   const events = getEvents();
   document.getElementById('event-count-btn').textContent = events.length;
   const container = document.getElementById('admin-events-container');
-  if (events.length === 0) {
-    container.innerHTML = `<div class="no-items">📭 ยังไม่มี Event กดสร้าง Event เพื่อเริ่มต้น</div>`;
+  if (!events.length) {
+    container.innerHTML = `<div class="no-items">📭 ยังไม่มี Event</div>`;
     return;
   }
   container.innerHTML = events.map(e => `
@@ -1334,7 +1347,6 @@ function renderDashboard() {
         <div class="admin-event-meta">
           <span>🗓️ ${formatDate(e.date)}</span>
           <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
-          <span>👤 ${(e.photos||[]).length} ใบหน้า</span>
         </div>
         <div class="admin-event-actions">
           <button class="btn-action btn-upload" onclick="openUploadForEvent('${e.id}')">⬆️ อัพโหลด</button>
@@ -1342,38 +1354,31 @@ function renderDashboard() {
           <button class="btn-action btn-photos" onclick="openPhotosModal('${e.id}')">🖼️ รูปภาพ</button>
         </div>
         <div class="admin-event-actions2">
-          <button class="btn-action btn-show ${e.visible ? '' : 'hide-mode'}" id="vis-btn-${e.id}" onclick="toggleVisibility('${e.id}')">
-            ${e.visible ? '👁️ แสดง' : '🙈 ซ่อน'}
-          </button>
+          <button class="btn-action btn-show ${e.visible ? '' : 'hide-mode'}" onclick="toggleVisibility('${e.id}')">${e.visible ? '👁️ แสดง' : '🙈 ซ่อน'}</button>
           <button class="btn-action btn-delete-event" onclick="openDeleteEvent('${e.id}')">🗑️ ลบ Event</button>
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
+// ====== EVENT CRUD (Firestore) ======
 function doCreateEvent() {
   const name = document.getElementById('ce-name').value.trim();
   const date = document.getElementById('ce-date').value;
   const desc = document.getElementById('ce-desc').value.trim();
   const cover = document.getElementById('ceCoverData').value;
   if (!name) { showToast('⚠️ กรุณากรอกชื่อ Event'); return; }
-  const events = getEvents();
-  events.unshift({ id: 'ev_'+Date.now(), name, date, desc, cover, photos: [], visible: true, createdAt: Date.now() });
-  setEvents(events);
+  const eventId = 'ev_' + Date.now();
+  const newEvent = { id: eventId, name, date, desc, cover, photos: [], visible: true, createdAt: new Date().toISOString() };
+  saveEventToFirestore(newEvent);
   closeModal('createEventModal');
-  document.getElementById('ce-name').value = '';
-  document.getElementById('ce-date').value = '';
-  document.getElementById('ce-desc').value = '';
-  document.getElementById('ceCoverData').value = '';
+  ['ce-name','ce-date','ce-desc','ceCoverData'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('ce-cover-preview').innerHTML = '<span style="font-size:32px">🖼️</span><div style="font-size:11px;color:var(--gold-dark)">เลือกรูปปก</div>';
-  renderDashboard();
-  showToast('✅ สร้าง Event เรียบร้อยแล้ว');
+  showToast('✅ สร้าง Event แล้ว');
 }
 
 function openEditEvent(id) {
-  const events = getEvents();
-  const e = events.find(x => x.id === id);
+  const e = getEvents().find(x => x.id === id);
   if (!e) return;
   document.getElementById('ee-id').value = id;
   document.getElementById('ee-name').value = e.name;
@@ -1390,134 +1395,75 @@ function saveEditEvent() {
   const events = getEvents();
   const idx = events.findIndex(x => x.id === id);
   if (idx < 0) return;
-  events[idx].name = document.getElementById('ee-name').value.trim();
-  events[idx].date = document.getElementById('ee-date').value;
-  events[idx].desc = document.getElementById('ee-desc').value.trim();
+  const updated = { ...events[idx] };
+  updated.name = document.getElementById('ee-name').value.trim();
+  updated.date = document.getElementById('ee-date').value;
+  updated.desc = document.getElementById('ee-desc').value.trim();
   const newCover = document.getElementById('eeCoverData').value;
-  if (newCover) events[idx].cover = newCover;
-  setEvents(events);
+  if (newCover) updated.cover = newCover;
+  saveEventToFirestore(updated);
   closeModal('editEventModal');
-  renderDashboard();
-  showToast('✅ บันทึกเรียบร้อย');
+  showToast('✅ แก้ไขแล้ว');
 }
 
 function toggleVisibility(id) {
   const events = getEvents();
   const idx = events.findIndex(x => x.id === id);
   if (idx < 0) return;
-  events[idx].visible = !events[idx].visible;
-  setEvents(events);
-  renderDashboard();
-  showToast(events[idx].visible ? '👁️ แสดง Event แล้ว' : '🙈 ซ่อน Event แล้ว');
+  const updated = { ...events[idx] };
+  updated.visible = !updated.visible;
+  saveEventToFirestore(updated);
+  showToast(updated.visible ? '👁️ แสดง Event แล้ว' : '🙈 ซ่อน Event แล้ว');
 }
 
-function openDeleteEvent(id) {
-  document.getElementById('del-event-id').value = id;
-  openModal('deleteEventModal');
-}
-
+function openDeleteEvent(id) { document.getElementById('del-event-id').value = id; openModal('deleteEventModal'); }
 function confirmDeleteEvent() {
   const id = document.getElementById('del-event-id').value;
-  let events = getEvents();
-  events = events.filter(x => x.id !== id);
-  setEvents(events);
+  deleteEventFromFirestore(id);
   closeModal('deleteEventModal');
-  renderDashboard();
-  showToast('🗑️ ลบ Event เรียบร้อยแล้ว');
+  showToast('🗑️ ลบ Event แล้ว');
 }
 
-function openEventListModal() {
-  const events = getEvents();
-  const grid = document.getElementById('event-list-grid');
-  if (events.length === 0) { grid.innerHTML = '<div class="no-items">ยังไม่มี Event</div>'; }
-  else {
-    grid.innerHTML = events.map(e => `
-      <div class="event-list-item" onclick="jumpToEvent('${e.id}')">
-        <div class="event-list-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
-        <div class="event-list-info">
-          <div class="event-list-name">${e.name}</div>
-          <div class="event-list-date">🗓️ ${formatDate(e.date)}</div>
-        </div>
-      </div>`).join('');
-  }
-  openModal('eventListModal');
-}
+// ====== PHOTOS ======
+function openUploadForEvent(id) { document.getElementById('upload-event-id').value = id; document.getElementById('upload-progress').classList.add('hidden'); openModal('uploadModal'); }
+function openPhotoUpload() { document.getElementById('photoUploadInput').click(); }
 
-function jumpToEvent(id) {
-  closeModal('eventListModal');
-  const el = document.getElementById('ev-card-'+id);
-  if (el) { setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200); }
-}
-
-// ======= PHOTOS =======
-function openUploadForEvent(id) {
-  document.getElementById('upload-event-id').value = id;
-  document.getElementById('upload-progress').classList.add('hidden');
-  openModal('uploadModal');
-}
-
-function openPhotoUpload() {
-  document.getElementById('photoUploadInput').click();
-}
-
-// ★★★ ฟังก์ชันอัพโหลดรูปใหม่ – ใช้ Cloudinary แทน base64 ★★★
 async function handlePhotoUpload(input) {
   const id = document.getElementById('upload-event-id').value || document.getElementById('photos-event-id').value;
   if (!input.files.length) return;
-
   const files = Array.from(input.files);
   const prog = document.getElementById('upload-progress');
   prog.classList.remove('hidden');
-  prog.textContent = `⬆️ เริ่มอัปโหลด 0/${files.length} รูป...`;
-
   let done = 0;
   const total = files.length;
+  prog.textContent = `⬆️ เริ่มอัปโหลด 0/${total} รูป...`;
   const events = getEvents();
   const evIndex = events.findIndex(e => e.id === id);
-
   for (let i = 0; i < files.length; i++) {
     try {
       const imageUrl = await uploadToCloudinary(files[i]);
       if (evIndex !== -1) {
         events[evIndex].photos = events[evIndex].photos || [];
-        events[evIndex].photos.push({
-          id: 'ph_' + Date.now() + '_' + i,
-          data: imageUrl,
-          cloudinaryUrl: imageUrl
-        });
-        // ❌ ลบ setEvents(events) ที่เคยอยู่ตรงนี้
+        events[evIndex].photos.push({ id: 'ph_'+Date.now()+'_'+i, data: imageUrl, cloudinaryUrl: imageUrl });
       }
       done++;
       prog.textContent = `⬆️ อัปโหลดแล้ว ${done}/${total} รูป...`;
-    } catch (err) {
-      console.error('Upload error:', err);
-      showToast(`❌ รูปที่ ${i+1} ไม่สามารถอัปโหลดได้: ${err.message}`);
-    }
+    } catch (err) { showToast(`❌ รูปที่ ${i+1} ไม่สำเร็จ: ${err.message}`); }
   }
-
-  // ✅ บันทึกข้อมูลทั้งหมดเพียงครั้งเดียว หลังจากอัปโหลดครบ
-  if (done > 0 && evIndex !== -1) {
-    setEvents(events); // ซึ่งจะเรียก saveDataToGitHub() ภายใน
-  }
-
+  if (done > 0 && evIndex !== -1) saveEventToFirestore(events[evIndex]);
   prog.classList.add('hidden');
-  renderDashboard();
-  if (document.getElementById('photosModal').classList.contains('active')) {
-    openPhotosModal(id);
-  }
+  if (document.getElementById('photosModal').classList.contains('active')) openPhotosModal(id);
   showToast(`✅ อัปโหลด ${done}/${total} รูปไปยัง Cloudinary เรียบร้อย`);
   input.value = '';
 }
 
 function openPhotosModal(id) {
   document.getElementById('photos-event-id').value = id;
-  const events = getEvents();
-  const ev = events.find(x => x.id === id);
+  const ev = getEvents().find(x => x.id === id);
   const photos = ev ? (ev.photos || []) : [];
   const grid = document.getElementById('photos-grid');
-  if (photos.length === 0) {
-    grid.innerHTML = '<div class="no-items">ยังไม่มีรูปภาพ</div>';
-  } else {
+  if (!photos.length) { grid.innerHTML = '<div class="no-items">ยังไม่มีรูปภาพ</div>'; }
+  else {
     grid.innerHTML = photos.map((ph, i) => `
       <div class="photo-thumb-wrap" id="phtw-${ph.id}">
         <div class="photo-thumb" onclick="openLightboxAdmin('${id}',${i})">${`<img src="${ph.data}" alt="">`}</div>
@@ -1540,100 +1486,64 @@ function deleteCheckedPhotos() {
   const idx = events.findIndex(x => x.id === id);
   if (idx < 0) return;
   const toDelete = [];
-  document.querySelectorAll('.photo-tick.checked').forEach(el => {
-    const pid = el.id.replace('tick-','');
-    toDelete.push(pid);
-  });
-  if (toDelete.length === 0) { showToast('⚠️ กรุณาเลือกรูปที่ต้องการลบ'); return; }
+  document.querySelectorAll('.photo-tick.checked').forEach(el => toDelete.push(el.id.replace('tick-','')));
+  if (!toDelete.length) { showToast('⚠️ เลือกรูปก่อน'); return; }
   events[idx].photos = events[idx].photos.filter(ph => !toDelete.includes(ph.id));
-  setEvents(events);
+  saveEventToFirestore(events[idx]);
   openPhotosModal(id);
-  renderDashboard();
-  showToast(`🗑️ ลบ ${toDelete.length} รูปเรียบร้อย`);
+  showToast(`🗑️ ลบ ${toDelete.length} รูปแล้ว`);
 }
 
-// ======= LIGHTBOX ADMIN =======
+// ====== LIGHTBOX ======
 function openLightboxAdmin(eventId, idx) {
-  const events = getEvents();
-  const ev = events.find(x => x.id === eventId);
+  const ev = getEvents().find(x => x.id === eventId);
   if (!ev) return;
   lightboxPhotos = ev.photos || [];
-  lightboxIndex = idx;
-  lightboxMode = 'admin';
-  lightboxEventId = eventId;
+  lightboxIndex = idx; lightboxMode = 'admin'; lightboxEventId = eventId;
   document.getElementById('lb-del-btn').textContent = '🗑️ ลบรูปภาพ';
   showLightbox();
 }
 function openLightboxPublic(photos, idx, eventId) {
-  lightboxPhotos = photos;
-  lightboxIndex = idx;
-  lightboxMode = 'public';
-  lightboxEventId = eventId;
+  lightboxPhotos = photos; lightboxIndex = idx; lightboxMode = 'public'; lightboxEventId = eventId;
   document.getElementById('lb-del-btn').textContent = '⚠️ แจ้งลบรูปภาพ';
   showLightbox();
 }
-
 function showLightbox() {
-  if (lightboxPhotos.length === 0) return;
-  const ph = lightboxPhotos[lightboxIndex];
-  document.getElementById('lb-img').src = ph.data;
-  lightboxPhotoId = ph.id;
+  if (!lightboxPhotos.length) return;
+  document.getElementById('lb-img').src = lightboxPhotos[lightboxIndex].data;
+  lightboxPhotoId = lightboxPhotos[lightboxIndex].id;
   document.getElementById('lightbox').classList.add('active');
 }
-
 function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
-
-function lightboxPrev() {
-  lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length;
-  showLightbox();
-}
-
-function lightboxNext() {
-  lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length;
-  showLightbox();
-}
-
+function lightboxPrev() { lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length; showLightbox(); }
+function lightboxNext() { lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length; showLightbox(); }
 function lightboxDelete() {
   if (lightboxMode === 'admin') {
     const events = getEvents();
     const idx = events.findIndex(x => x.id === lightboxEventId);
     if (idx < 0) return;
     events[idx].photos = events[idx].photos.filter(ph => ph.id !== lightboxPhotoId);
-    setEvents(events);
+    saveEventToFirestore(events[idx]);
     closeLightbox();
     openPhotosModal(lightboxEventId);
-    renderDashboard();
-    showToast('🗑️ ลบรูปภาพเรียบร้อย');
+    showToast('🗑️ ลบรูปแล้ว');
   } else {
     closeLightbox();
     openReportModal(lightboxPhotoId, lightboxEventId, lightboxPhotos[lightboxIndex]);
   }
 }
+function lightboxDownload() { downloadPhoto(lightboxPhotos[lightboxIndex].data, 'photo_'+lightboxIndex+'.jpg'); }
 
-function lightboxDownload() {
-  const ph = lightboxPhotos[lightboxIndex];
-  downloadPhoto(ph.data, 'photo_'+lightboxIndex+'.jpg');
-}
-
-// ======= MEMBERS =======
-function renderMembers() {
-  renderPending();
-  renderAllMembers();
-}
-
+// ====== MEMBERS ======
+function renderMembers() { renderPending(); renderAllMembers(); }
 function renderPending() {
   const pending = getPending();
   const container = document.getElementById('pending-list');
-  if (pending.length === 0) {
-    container.innerHTML = '<div class="no-items">ไม่มีผู้สมัคร</div>'; return;
-  }
+  if (!pending.length) { container.innerHTML = '<div class="no-items">ไม่มีผู้สมัคร</div>'; return; }
   container.innerHTML = pending.map(p => `
     <div class="member-item" id="pend-${p.id}">
       <div class="member-item-top">
-        <div>
-          <div class="member-avatar">${p.avatar ? `<img src="${p.avatar}" alt="">` : '👤'}</div>
-          <div class="member-role-label">👤 บัญชีทั่วไป</div>
-        </div>
+        <div><div class="member-avatar">${p.avatar ? `<img src="${p.avatar}" alt="">` : '👤'}</div><div class="member-role-label">👤 บัญชีทั่วไป</div></div>
         <div class="member-details">
           <div class="member-info-line"><span class="member-info-label">🚩</span><span>${p.username}</span></div>
           <div class="member-info-line"><span class="member-info-label">🔤</span><span>${p.name}</span></div>
@@ -1646,7 +1556,6 @@ function renderPending() {
       </div>
     </div>`).join('');
 }
-
 function approveMember(pid) {
   const pending = getPending();
   const p = pending.find(x => x.id === pid);
@@ -1658,12 +1567,7 @@ function approveMember(pid) {
   renderMembers();
   showToast(`✅ อนุมัติ ${p.name} เรียบร้อย`);
 }
-
-function rejectMember(pid) {
-  setPending(getPending().filter(x => x.id !== pid));
-  renderMembers();
-  showToast('❌ ปฏิเสธการสมัครเรียบร้อย');
-}
+function rejectMember(pid) { setPending(getPending().filter(x => x.id !== pid)); renderMembers(); showToast('❌ ปฏิเสธแล้ว'); }
 
 function renderAllMembers() {
   const users = getUsers();
@@ -1672,18 +1576,9 @@ function renderAllMembers() {
   const ceoCount = users.filter(u => u.role === 'CEO').length;
   const superCount = users.filter(u => u.role === 'SuperAdmin').length;
   const adminCount = users.filter(u => u.role === 'Admin').length;
-  stats.innerHTML = `
-    <p>👑 CEO ${ceoCount} ท่าน</p>
-    <p>⭐ SuperAdmin ${superCount} ท่าน</p>
-    <p>👤 Admin ${adminCount} ท่าน</p>`;
-  // Sort: self first, then CEO, SuperAdmin, Admin
-  const sortedUsers = [
-    ...users.filter(u => u.id === currentUser.id),
-    ...users.filter(u => u.id !== currentUser.id && u.role === 'CEO'),
-    ...users.filter(u => u.id !== currentUser.id && u.role === 'SuperAdmin'),
-    ...users.filter(u => u.id !== currentUser.id && u.role === 'Admin'),
-  ];
-  container.innerHTML = sortedUsers.map(u => {
+  stats.innerHTML = `<p>👑 CEO ${ceoCount} ท่าน</p><p>⭐ SuperAdmin ${superCount} ท่าน</p><p>👤 Admin ${adminCount} ท่าน</p>`;
+  const sorted = [ ...users.filter(u => u.id === currentUser.id), ...users.filter(u => u.id !== currentUser.id && u.role === 'CEO'), ...users.filter(u => u.id !== currentUser.id && u.role === 'SuperAdmin'), ...users.filter(u => u.id !== currentUser.id && u.role === 'Admin') ];
+  container.innerHTML = sorted.map(u => {
     const isSelf = u.id === currentUser.id;
     const showPass = canSeePasswordOf(u);
     const canChangeRole = canChangeRoleOf(u);
@@ -1693,10 +1588,7 @@ function renderAllMembers() {
     return `
       <div class="all-member-item">
         <div class="all-member-top">
-          <div>
-            <div class="member-avatar">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div>
-            <div class="member-role-label">${isSelf && u.isRoot ? '👑 บัญชีหลัก' : '👤 บัญชีทั่วไป'}</div>
-          </div>
+          <div><div class="member-avatar">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div><div class="member-role-label">${isSelf&&u.isRoot?'👑 บัญชีหลัก':'👤 บัญชีทั่วไป'}</div></div>
           <div class="member-details">
             <div class="member-info-line"><span class="member-info-label">🚩</span><span>${u.username}</span></div>
             <div class="member-info-line"><span class="member-info-label">🔤</span><span>${u.name}</span></div>
@@ -1707,129 +1599,38 @@ function renderAllMembers() {
         <hr class="all-member-divider">
         <div class="all-member-bottom">
           ${canChangeRole ? `<select class="role-select" onchange="changeRole('${u.id}',this.value)">${roleOpts}</select>` : `<span style="font-size:12px;color:var(--gold-dark);font-weight:600">${u.role}</span>`}
-          ${canEdit ? `<button class="btn-sm btn-sm-edit" onclick="openEditMember('${u.id}')">✏️ แก้ไข</button>` : `<button class="btn-sm btn-sm-edit" style="opacity:0.4;cursor:not-allowed">✏️ แก้ไข</button>`}
-          ${canDelete ? `<button class="btn-sm btn-sm-del" onclick="openDeleteMember('${u.id}')">🗑️ ลบ</button>` : `<button class="btn-sm btn-sm-del" style="opacity:0.4;cursor:not-allowed">🗑️ ลบ</button>`}
+          ${canEdit ? `<button class="btn-sm btn-sm-edit" onclick="openEditMember('${u.id}')">✏️ แก้ไข</button>` : `<button class="btn-sm btn-sm-edit" style="opacity:0.4">✏️ แก้ไข</button>`}
+          ${canDelete ? `<button class="btn-sm btn-sm-del" onclick="openDeleteMember('${u.id}')">🗑️ ลบ</button>` : `<button class="btn-sm btn-sm-del" style="opacity:0.4">🗑️ ลบ</button>`}
         </div>
       </div>`;
   }).join('');
 }
 
-function canSeePassword() {
-  return currentUser && (currentUser.role === 'CEO' || currentUser.role === 'SuperAdmin');
-}
+// ฟังก์ชันสมาชิกที่เหลือ (คงเดิม) —> รวมมาให้แล้วข้างบน (canSeePassword, etc.)
+function canSeePassword() { return currentUser && (currentUser.role === 'CEO' || currentUser.role === 'SuperAdmin'); }
+function canSeePasswordOf(u) { if(!currentUser) return false; if(currentUser.isRoot) return !u.isRoot || u.id===currentUser.id; if(currentUser.role==='CEO') return u.role!=='CEO'||u.id===currentUser.id; return u.id===currentUser.id; }
+function canChangeRoleOf(u) { if(!currentUser) return false; if(u.isRoot) return false; if(u.id===currentUser.id && !currentUser.isRoot) return false; if(currentUser.isRoot) return u.id!==currentUser.id; if(currentUser.role==='CEO' && !currentUser.isRoot) return u.role!=='CEO'; if(currentUser.role==='SuperAdmin') return u.role!=='CEO' && u.role!=='SuperAdmin'; return false; }
+function canDeleteUser(u) { if(!currentUser) return false; if(u.id===currentUser.id) return false; if(u.isRoot) return false; if(currentUser.isRoot) return true; if(currentUser.role==='CEO') return u.role!=='CEO'; if(currentUser.role==='SuperAdmin') return u.role==='Admin'; return false; }
+function getRoleOptions(u) { return ['CEO','SuperAdmin','Admin'].map(r => `<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`).join(''); }
+function changeRole(uid, newRole) { if(!canChangeRoleOf(getUsers().find(u=>u.id===uid))) { showToast('❌ ไม่มีสิทธิ์'); return; } const users = getUsers(); const idx = users.findIndex(u=>u.id===uid); if(idx<0) return; users[idx].role = newRole; setUsers(users); renderMembers(); showToast('✅ เปลี่ยนแล้ว'); }
+function openDeleteMember(uid) { const users = getUsers(); const u = users.find(x=>x.id===uid); if(!u) return; document.getElementById('del-member-id').value = uid; document.getElementById('del-member-preview').innerHTML = `<div class="member-avatar" style="width:42px;height:42px;">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div><div><div style="font-size:13px;font-weight:700">${u.name}</div><div style="font-size:12px;color:var(--gray)">${u.username} · ${u.role}</div></div>`; openModal('deleteMemberModal'); }
+function confirmDeleteMember() { const uid = document.getElementById('del-member-id').value; let users = getUsers(); users = users.filter(u=>u.id!==uid); setUsers(users); closeModal('deleteMemberModal'); renderMembers(); showToast('🗑️ ลบสมาชิกแล้ว'); }
+function openEditMember(uid) { const users = getUsers(); const u = users.find(x=>x.id===uid); if(!u) return; document.getElementById('em-id').value = uid; document.getElementById('em-user').value = u.username; document.getElementById('em-name').value = u.name; document.getElementById('em-pass').value = u.password; openModal('editMemberModal'); }
+function saveMemberEdit() { const uid = document.getElementById('em-id').value; const users = getUsers(); const idx = users.findIndex(u=>u.id===uid); if(idx<0) return; users[idx].username = document.getElementById('em-user').value.trim(); users[idx].name = document.getElementById('em-name').value.trim(); users[idx].password = document.getElementById('em-pass').value.trim(); setUsers(users); closeModal('editMemberModal'); renderMembers(); showToast('✅ บันทึกแล้ว'); }
 
-function canSeePasswordOf(u) {
-  if (!currentUser) return false;
-  if (currentUser.isRoot) return !u.isRoot || u.id === currentUser.id;
-  if (currentUser.role === 'CEO') return u.role !== 'CEO' || u.id === currentUser.id;
-  return u.id === currentUser.id;
-}
-
-function canChangeRoleOf(u) {
-  if (!currentUser) return false;
-  if (u.isRoot) return false;
-  if (u.id === currentUser.id && !currentUser.isRoot) return false;
-  if (currentUser.isRoot) return u.id !== currentUser.id;
-  if (currentUser.role === 'CEO' && !currentUser.isRoot) {
-    if (u.role === 'CEO') return false;
-    return true;
-  }
-  if (currentUser.role === 'SuperAdmin') {
-    if (u.role === 'CEO' || u.role === 'SuperAdmin') return false;
-    return true;
-  }
-  return false;
-}
-
-function canDeleteUser(u) {
-  if (!currentUser) return false;
-  if (u.id === currentUser.id) return false;
-  if (u.isRoot) return false;
-  if (currentUser.isRoot) return true;
-  if (currentUser.role === 'CEO') return u.role !== 'CEO';
-  if (currentUser.role === 'SuperAdmin') return u.role === 'Admin';
-  return false;
-}
-
-function getRoleOptions(u) {
-  const roles = ['CEO','SuperAdmin','Admin'];
-  return roles.map(r => `<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`).join('');
-}
-
-function changeRole(uid, newRole) {
-  if (!canChangeRoleOf(getUsers().find(u=>u.id===uid))) { showToast('❌ ไม่มีสิทธิ์เปลี่ยนตำแหน่ง'); return; }
-  const users = getUsers();
-  const idx = users.findIndex(u => u.id === uid);
-  if (idx < 0) return;
-  users[idx].role = newRole;
-  setUsers(users);
-  renderMembers();
-  showToast(`✅ เปลี่ยนตำแหน่งเรียบร้อย`);
-}
-
-function openDeleteMember(uid) {
-  const users = getUsers();
-  const u = users.find(x => x.id === uid);
-  if (!u) return;
-  document.getElementById('del-member-id').value = uid;
-  document.getElementById('del-member-preview').innerHTML = `
-    <div class="member-avatar" style="width:42px;height:42px;flex-shrink:0">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div>
-    <div><div style="font-size:13px;font-weight:700">${u.name}</div><div style="font-size:12px;color:var(--gray)">${u.username} · ${u.role}</div></div>`;
-  openModal('deleteMemberModal');
-}
-
-function confirmDeleteMember() {
-  const uid = document.getElementById('del-member-id').value;
-  let users = getUsers();
-  users = users.filter(u => u.id !== uid);
-  setUsers(users);
-  closeModal('deleteMemberModal');
-  renderMembers();
-  showToast('🗑️ ลบสมาชิกเรียบร้อย');
-}
-
-function openEditMember(uid) {
-  const users = getUsers();
-  const u = users.find(x => x.id === uid);
-  if (!u) return;
-  document.getElementById('em-id').value = uid;
-  document.getElementById('em-user').value = u.username;
-  document.getElementById('em-name').value = u.name;
-  document.getElementById('em-pass').value = u.password;
-  openModal('editMemberModal');
-}
-
-function saveMemberEdit() {
-  const uid = document.getElementById('em-id').value;
-  const users = getUsers();
-  const idx = users.findIndex(u => u.id === uid);
-  if (idx < 0) return;
-  users[idx].username = document.getElementById('em-user').value.trim();
-  users[idx].name = document.getElementById('em-name').value.trim();
-  users[idx].password = document.getElementById('em-pass').value.trim();
-  setUsers(users);
-  closeModal('editMemberModal');
-  renderMembers();
-  showToast('✅ บันทึกเรียบร้อย');
-}
-
-// ======= PROFILE =======
+// ====== PROFILE ======
 function renderProfile() {
   if (!currentUser) return;
-  const users = getUsers();
-  const u = users.find(x => x.id === currentUser.id) || currentUser;
+  const u = getUsers().find(x => x.id === currentUser.id) || currentUser;
   const avatarEl = document.getElementById('profile-avatar-display');
   avatarEl.innerHTML = u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : '👤';
-  const usernameDisplay = document.getElementById('profile-username-display');
-  const usernameEdit = document.getElementById('profile-username-edit');
-  usernameDisplay.textContent = u.username;
-  usernameEdit.value = u.username;
-  if (u.isRoot) { usernameDisplay.classList.add('hidden'); usernameEdit.classList.remove('hidden'); }
-  else { usernameDisplay.classList.remove('hidden'); usernameEdit.classList.add('hidden'); }
+  document.getElementById('profile-username-display').textContent = u.username;
+  document.getElementById('profile-username-edit').value = u.username;
+  if (u.isRoot) { document.getElementById('profile-username-display').classList.add('hidden'); document.getElementById('profile-username-edit').classList.remove('hidden'); }
+  else { document.getElementById('profile-username-display').classList.remove('hidden'); document.getElementById('profile-username-edit').classList.add('hidden'); }
   document.getElementById('profile-name-edit').value = u.name;
   document.getElementById('profile-password-edit').value = '';
 }
-
 function handleProfileAvatarChange(input) {
   if (!input.files[0]) return;
   const reader = new FileReader();
@@ -1839,7 +1640,6 @@ function handleProfileAvatarChange(input) {
   };
   reader.readAsDataURL(input.files[0]);
 }
-
 function saveProfile() {
   if (!currentUser) return;
   const users = getUsers();
@@ -1848,10 +1648,7 @@ function saveProfile() {
   const newName = document.getElementById('profile-name-edit').value.trim();
   const newPass = document.getElementById('profile-password-edit').value.trim();
   const newAvatar = document.getElementById('profile-avatar-display').dataset.newAvatar;
-  if (currentUser.isRoot) {
-    const newUser = document.getElementById('profile-username-edit').value.trim();
-    if (newUser) users[idx].username = newUser;
-  }
+  if (currentUser.isRoot) { const newUser = document.getElementById('profile-username-edit').value.trim(); if (newUser) users[idx].username = newUser; }
   if (newName) users[idx].name = newName;
   if (newPass) users[idx].password = newPass;
   if (newAvatar) users[idx].avatar = newAvatar;
@@ -1862,107 +1659,69 @@ function saveProfile() {
   showToast('✅ บันทึกข้อมูลเรียบร้อย');
 }
 
-// ======= EVENT VIEW =======
+// ====== EVENT VIEW ======
 function openEventView(id, mode) {
-  const events = getEvents();
-  const ev = events.find(x => x.id === id);
+  const ev = getEvents().find(x => x.id === id);
   if (!ev) return;
   currentEventView = id;
-  const coverEl = document.getElementById('ev-cover');
-  coverEl.innerHTML = ev.cover ? `<img src="${ev.cover}" alt="">` : '🖼️';
+  document.getElementById('ev-cover').innerHTML = ev.cover ? `<img src="${ev.cover}" alt="">` : '🖼️';
   document.getElementById('ev-name').textContent = ev.name;
-  document.getElementById('ev-meta').innerHTML = `
-    <span>🗓️ ${formatDate(ev.date)}</span>
-    <span>🖼️ ${(ev.photos||[]).length} ภาพ</span>
-    <span>👤 ${(ev.photos||[]).length} ใบหน้า</span>`;
-  // Photos
-  const photos = ev.photos || [];
+  document.getElementById('ev-meta').innerHTML = `<span>🗓️ ${formatDate(ev.date)}</span><span>🖼️ ${(ev.photos||[]).length} ภาพ</span>`;
   const grid = document.getElementById('public-photos-grid');
-  grid.innerHTML = photos.map((ph, i) => `
+  grid.innerHTML = (ev.photos||[]).map((ph, i) => `
     <div class="pub-photo-wrap">
-      <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${id}'),${i},'${id}')">${`<img src="${ph.data}" alt="">`}</div>
+      <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${id}'),${i},'${id}')"><img src="${ph.data}" alt=""></div>
       <div class="pub-tick" id="pub-tick-${ph.id}" onclick="togglePubTick('${ph.id}')"></div>
       <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${i+1}.jpg')">⬇️</button>
     </div>`).join('');
   document.getElementById('event-view').classList.add('active');
-  if (mode === 'public') {
-    document.getElementById('header-section').style.display = 'none';
-    document.getElementById('gold-section').style.display = 'none';
-  } else {
-    document.getElementById('admin-section-3').classList.remove('active');
-  }
+  if (mode === 'public') { document.getElementById('header-section').style.display = 'none'; document.getElementById('gold-section').style.display = 'none'; }
+  else { document.getElementById('admin-section-3').classList.remove('active'); }
   window.scrollTo({ top: 0 });
 }
-
-function getEventPhotos(id) {
-  const events = getEvents();
-  const ev = events.find(x => x.id === id);
-  return ev ? (ev.photos || []) : [];
-}
-
+function getEventPhotos(id) { const ev = getEvents().find(x => x.id === id); return ev ? (ev.photos || []) : []; }
 function closeEventView() {
   document.getElementById('event-view').classList.remove('active');
-  if (currentUser) {
-    document.getElementById('admin-section-3').classList.add('active');
-  } else {
-    document.getElementById('header-section').style.display = 'block';
-    document.getElementById('gold-section').style.display = 'block';
-  }
+  if (currentUser) document.getElementById('admin-section-3').classList.add('active');
+  else { document.getElementById('header-section').style.display = 'block'; document.getElementById('gold-section').style.display = 'block'; renderPublicEvents(); }
 }
-
-function togglePubTick(pid) {
-  const el = document.getElementById('pub-tick-'+pid);
-  el.classList.toggle('checked');
-  el.textContent = el.classList.contains('checked') ? '✓' : '';
-}
-
+function togglePubTick(pid) { const el = document.getElementById('pub-tick-'+pid); el.classList.toggle('checked'); el.textContent = el.classList.contains('checked') ? '✓' : ''; }
 function downloadSelectedPublic() {
   const checked = document.querySelectorAll('.pub-tick.checked');
-  if (checked.length === 0) { showToast('⚠️ กรุณาเลือกรูปที่ต้องการดาวโหลด'); return; }
-  const events = getEvents();
-  const ev = events.find(x => x.id === currentEventView);
+  if (!checked.length) { showToast('⚠️ เลือกรูปก่อน'); return; }
+  const ev = getEvents().find(x => x.id === currentEventView);
   if (!ev) return;
-  checked.forEach((el, i) => {
-    const pid = el.id.replace('pub-tick-','');
-    const ph = ev.photos.find(x => x.id === pid);
-    if (ph) setTimeout(() => downloadPhoto(ph.data, `photo_${pid}.jpg`), i * 200);
-  });
+  checked.forEach((el, i) => { const pid = el.id.replace('pub-tick-',''); const ph = ev.photos.find(x => x.id === pid); if (ph) setTimeout(() => downloadPhoto(ph.data, `photo_${pid}.jpg`), i*200); });
   showToast(`⬇️ ดาวโหลด ${checked.length} ภาพ`);
 }
 
-// ======= REPORT =======
+// ====== REPORT ======
 function openReportModal(photoId, eventId, photo) {
   document.getElementById('report-photo-id').value = photoId;
   document.getElementById('report-event-id').value = eventId;
   const prev = document.getElementById('report-photo-preview');
-  if (photo && photo.data) prev.innerHTML = `<img src="${photo.data}" alt="">`;
-  else prev.innerHTML = '<span style="font-size:48px">🖼️</span>';
+  prev.innerHTML = (photo && photo.data) ? `<img src="${photo.data}" alt="">` : '<span style="font-size:48px">🖼️</span>';
   document.getElementById('report-reason').value = '';
   openModal('reportModal');
 }
-
 function submitReport() {
   const pid = document.getElementById('report-photo-id').value;
   const eid = document.getElementById('report-event-id').value;
   const reason = document.getElementById('report-reason').value.trim();
-  if (!reason) { showToast('⚠️ กรุณาระบุเหตุผล'); return; }
-  const events = getEvents();
-  const ev = events.find(x => x.id === eid);
-  const ph = ev ? (ev.photos||[]).find(x => x.id === pid) : null;
-  const requests = getRequests();
-  requests.push({ id: 'req_'+Date.now(), photoId: pid, eventId: eid, eventName: ev ? ev.name : '-', photoData: ph ? ph.data : null, reason, date: new Date().toLocaleDateString('th-TH') });
-  setRequests(requests);
+  if (!reason) { showToast('⚠️ ระบุเหตุผล'); return; }
+  const ev = getEvents().find(x => x.id === eid);
+  const request = {
+    id: 'req_'+Date.now(), photoId: pid, eventId: eid, eventName: ev ? ev.name : '-',
+    photoData: ev ? (ev.photos.find(p => p.id === pid) || {}).data : null, reason, date: new Date().toLocaleDateString('th-TH')
+  };
+  saveRequestToFirestore(request);
   closeModal('reportModal');
-  updateRequestBadge();
-  showToast('📨 ส่งรายงานเรียบร้อยแล้ว');
+  showToast('📨 ส่งรายงานแล้ว');
 }
-
 function renderRequests() {
   const requests = getRequests();
   const container = document.getElementById('request-list');
-  if (requests.length === 0) {
-    container.innerHTML = '<div class="no-items">📭 ไม่มีคำร้อง</div>'; return;
-  }
+  if (!requests.length) { container.innerHTML = '<div class="no-items">📭 ไม่มีคำร้อง</div>'; return; }
   container.innerHTML = requests.map(r => `
     <div class="request-item" id="req-${r.id}">
       <div class="request-img">${r.photoData ? `<img src="${r.photoData}" alt="">` : '🖼️'}</div>
@@ -1979,50 +1738,33 @@ function renderRequests() {
       </div>
     </div>`).join('');
 }
-
 function deleteReport(rid) {
-  let requests = getRequests();
-  requests = requests.filter(r => r.id !== rid);
-  setRequests(requests);
-  renderRequests();
-  updateRequestBadge();
-  showToast('✅ ลบรายงานเรียบร้อย');
+  if (!window.db) return;
+  window.deleteDoc(window.doc(window.db, "requests", rid)).then(() => showToast('✅ ลบรายงานแล้ว'));
 }
-
-function openDelReportPhoto(rid) {
-  document.getElementById('del-report-id').value = rid;
-  openModal('delReportPhotoModal');
-}
-
+function openDelReportPhoto(rid) { document.getElementById('del-report-id').value = rid; openModal('delReportPhotoModal'); }
 function confirmDelReportPhoto() {
   const rid = document.getElementById('del-report-id').value;
-  const requests = getRequests();
-  const r = requests.find(x => x.id === rid);
-  if (!r) return;
-  // Delete photo from event
+  const req = getRequests().find(r => r.id === rid);
+  if (!req) return;
   const events = getEvents();
-  const idx = events.findIndex(x => x.id === r.eventId);
+  const idx = events.findIndex(e => e.id === req.eventId);
   if (idx >= 0) {
-    events[idx].photos = events[idx].photos.filter(ph => ph.id !== r.photoId);
-    setEvents(events);
+    events[idx].photos = events[idx].photos.filter(ph => ph.id !== req.photoId);
+    saveEventToFirestore(events[idx]);
   }
-  // Remove report
-  setRequests(requests.filter(x => x.id !== rid));
+  window.deleteDoc(window.doc(window.db, "requests", rid));
   closeModal('delReportPhotoModal');
-  renderRequests();
-  renderDashboard();
-  updateRequestBadge();
   showToast('🗑️ ลบรูปภาพเรียบร้อย');
 }
-
 function updateRequestBadge() {
   const cnt = getRequests().length;
   const badge = document.getElementById('request-badge');
   if (cnt > 0) { badge.textContent = cnt; badge.classList.remove('hidden'); }
-  else { badge.classList.add('hidden'); }
+  else badge.classList.add('hidden');
 }
 
-// ======= COVER INPUT =======
+// ====== COVER INPUT ======
 function handleCoverInput(input, previewId, dataId) {
   if (!input.files[0]) return;
   const reader = new FileReader();
@@ -2033,84 +1775,53 @@ function handleCoverInput(input, previewId, dataId) {
   reader.readAsDataURL(input.files[0]);
 }
 
-// ======= FACE SEARCH =======
+// ====== FACE SEARCH ======
 function handleFaceSearch(input) {
   if (!input.files[0]) return;
   showToast('🔍 ระบบค้นหาใบหน้ายังอยู่ระหว่างพัฒนา');
 }
 
-// ======= DOWNLOAD =======
+// ====== DOWNLOAD ======
 function downloadPhoto(dataUrl, filename) {
-  // ใช้วิธี fetch รูปมาเป็น blob เพื่อบังคับดาวน์โหลดข้ามโดเมนได้
-  fetch(dataUrl)
-    .then(response => response.blob())
-    .then(blob => {
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl); // ล้างหน่วยความจำ
-    })
-    .catch(() => {
-      // ถ้า fetch ไม่ได้ (เช่นเน็ตหลุด) ให้เปิดในแท็บใหม่แทน
-      window.open(dataUrl, '_blank');
-    });
+  fetch(dataUrl).then(res => res.blob()).then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+  }).catch(() => window.open(dataUrl, '_blank'));
 }
 
-// ======= MODAL HELPERS =======
+// ====== MODAL HELPERS ======
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-// Close modal on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('active');
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('active'); });
 });
 
-// ======= TOAST =======
+// ====== TOAST ======
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ======= FORMAT DATE =======
+// ====== FORMAT DATE ======
 function formatDate(d) {
   if (!d) return '-';
-  try {
-    const date = new Date(d);
-    return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-  } catch(e) { return d; }
+  try { return new Date(d).toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' }); }
+  catch(e) { return d; }
 }
-// ====== รีเฟรชอัตโนมัติสำหรับผู้ใช้ทั่วไป ======
-window.__autoRefreshTimer = null;
 
-function startPublicAutoRefresh() {
-  if (window.__autoRefreshTimer) clearInterval(window.__autoRefreshTimer);
-  if (currentUser) return; // ถ้าเป็นแอดมิน ไม่ต้องรีเฟรช
-  window.__autoRefreshTimer = setInterval(async () => {
+// ====== รีเฟรชอัตโนมัติ (ถ้าต้องการ) ======
+(function startAutoRefresh() {
+  if (typeof currentUser !== 'undefined' && currentUser) return;
+  setInterval(async () => {
     if (!currentUser) {
-      try {
-        await loadData();
-        renderPublicEvents();
-        console.log('🔄 รีเฟรชอัตโนมัติสำเร็จ');
-      } catch(e) {
-        console.warn('รีเฟรชอัตโนมัติล้มเหลว:', e.message);
-      }
+      await renderPublicEvents();
+      console.log('🔄 รีเฟรชอัตโนมัติแล้ว');
     }
-  }, 30000); // ทุก 30 วินาที
-}
-
-// เริ่มเมื่อหน้าเว็บโหลด
-document.addEventListener('DOMContentLoaded', startPublicAutoRefresh);
+  }, 30000);
+})();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();
-</script>
+<script>eruda.init();</script>
 </body>
 </html>
