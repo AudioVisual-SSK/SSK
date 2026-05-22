@@ -1367,18 +1367,26 @@ async function doCreateEvent() {
   const date = document.getElementById('ce-date').value;
   const desc = document.getElementById('ce-desc').value.trim();
   const coverInput = document.getElementById('ceCoverInput');
+
   if (!name) { showToast('⚠️ กรุณากรอกชื่อ Event'); return; }
 
   let coverUrl = '';
-  // ถ้ามีการเลือกรูปปก ให้อัปโหลดไป Cloudinary ก่อน
-  if (coverInput.files.length > 0) {
+  // ตรวจสอบว่ามีการเลือกรูปปกหรือไม่
+  if (coverInput.files && coverInput.files.length > 0) {
     try {
       showToast('⬆️ กำลังอัปโหลดรูปปกไป Cloudinary...');
       coverUrl = await uploadToCloudinary(coverInput.files[0]);
+      if (!coverUrl || coverUrl.startsWith('data:')) {
+        throw new Error('ได้ base64 กลับมาแทน URL');
+      }
     } catch (err) {
+      console.error('อัปโหลดรูปปกล้มเหลว:', err);
       showToast('⚠️ อัปโหลดรูปปกไม่สำเร็จ: ' + err.message);
       return;
     }
+  } else {
+    // ถ้าไม่มีการเลือกรูปปก ให้ใช้ค่าว่าง
+    coverUrl = '';
   }
 
   const eventId = 'ev_' + Date.now();
@@ -1387,22 +1395,32 @@ async function doCreateEvent() {
     name,
     date,
     desc,
-    cover: coverUrl,   // ← เปลี่ยนเป็น URL แทน base64
+    cover: coverUrl,          // ← ตอนนี้เป็น URL หรือค่าว่างเท่านั้น
     photos: [],
     visible: true,
     createdAt: new Date().toISOString()
   };
 
-  saveEventToFirestore(newEvent);
+  // ตรวจสอบขั้นสุดท้ายก่อนส่ง (Debug)
+  if (coverUrl.startsWith('data:')) {
+    showToast('⚠️ ระบบตรวจพบ base64 หยุดบันทึกชั่วคราว');
+    return;
+  }
 
-  // ล้างฟอร์ม
-  closeModal('createEventModal');
-  document.getElementById('ce-name').value = '';
-  document.getElementById('ce-date').value = '';
-  document.getElementById('ce-desc').value = '';
-  document.getElementById('ceCoverData').value = '';
-  document.getElementById('ce-cover-preview').innerHTML = '<span style="font-size:32px">🖼️</span><div style="font-size:11px;color:var(--gold-dark)">เลือกรูปปก</div>';
-  showToast('✅ สร้าง Event แล้ว');
+  try {
+    await saveEventToFirestore(newEvent);
+    closeModal('createEventModal');
+    // ล้างฟอร์ม
+    document.getElementById('ce-name').value = '';
+    document.getElementById('ce-date').value = '';
+    document.getElementById('ce-desc').value = '';
+    document.getElementById('ceCoverData').value = '';
+    document.getElementById('ce-cover-preview').innerHTML = '<span style="font-size:32px">🖼️</span><div style="font-size:11px;color:var(--gold-dark)">เลือกรูปปก</div>';
+    showToast('✅ สร้าง Event แล้ว');
+  } catch (err) {
+    console.error('บันทึก Event ไม่สำเร็จ:', err);
+    showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
+  }
 }
 
 function openEditEvent(id) {
