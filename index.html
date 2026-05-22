@@ -1362,17 +1362,45 @@ function renderDashboard() {
 }
 
 // ====== EVENT CRUD (Firestore) ======
-function doCreateEvent() {
+async function doCreateEvent() {
   const name = document.getElementById('ce-name').value.trim();
   const date = document.getElementById('ce-date').value;
   const desc = document.getElementById('ce-desc').value.trim();
-  const cover = document.getElementById('ceCoverData').value;
+  const coverInput = document.getElementById('ceCoverInput');
   if (!name) { showToast('⚠️ กรุณากรอกชื่อ Event'); return; }
+
+  let coverUrl = '';
+  // ถ้ามีการเลือกรูปปก ให้อัปโหลดไป Cloudinary ก่อน
+  if (coverInput.files.length > 0) {
+    try {
+      showToast('⬆️ กำลังอัปโหลดรูปปกไป Cloudinary...');
+      coverUrl = await uploadToCloudinary(coverInput.files[0]);
+    } catch (err) {
+      showToast('⚠️ อัปโหลดรูปปกไม่สำเร็จ: ' + err.message);
+      return;
+    }
+  }
+
   const eventId = 'ev_' + Date.now();
-  const newEvent = { id: eventId, name, date, desc, cover, photos: [], visible: true, createdAt: new Date().toISOString() };
+  const newEvent = {
+    id: eventId,
+    name,
+    date,
+    desc,
+    cover: coverUrl,   // ← เปลี่ยนเป็น URL แทน base64
+    photos: [],
+    visible: true,
+    createdAt: new Date().toISOString()
+  };
+
   saveEventToFirestore(newEvent);
+
+  // ล้างฟอร์ม
   closeModal('createEventModal');
-  ['ce-name','ce-date','ce-desc','ceCoverData'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ce-name').value = '';
+  document.getElementById('ce-date').value = '';
+  document.getElementById('ce-desc').value = '';
+  document.getElementById('ceCoverData').value = '';
   document.getElementById('ce-cover-preview').innerHTML = '<span style="font-size:32px">🖼️</span><div style="font-size:11px;color:var(--gold-dark)">เลือกรูปปก</div>';
   showToast('✅ สร้าง Event แล้ว');
 }
