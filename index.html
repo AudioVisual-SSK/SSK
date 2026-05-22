@@ -543,7 +543,10 @@
       <button class="nav-btn" onclick="switchTab('request',this)" id="nav-request-btn">Request</button>
       <span class="request-badge hidden" id="request-badge">0</span>
     </div>
-    <button class="nav-btn" onclick="switchTab('member',this)">Member</button>
+    <div class="nav-btn-wrap">
+  <button class="nav-btn" onclick="switchTab('member',this)" id="nav-member-btn">Member</button>
+  <span class="request-badge hidden" id="member-badge">0</span>
+</div>
     <button class="nav-btn" onclick="switchTab('profile',this)">Profile</button>
   </div>
   <div class="nav-divider"></div>
@@ -1055,27 +1058,6 @@ async function saveEventToFirestore(event) {
       visible: event.visible !== false,
       createdAt: event.createdAt || window.serverTimestamp()
     });
-  } catch (err) { showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message); }
-}
-
-async function deleteEventFromFirestore(eventId) {
-  if (!window.db) { showToast('⚠️ Firebase ยังไม่พร้อม'); return; }
-  try { await window.deleteDoc(window.doc(window.db, "events", eventId)); }
-  catch (err) { showToast('⚠️ ลบไม่สำเร็จ: ' + err.message); }
-}
-
-async function saveEventToFirestore(event) {
-  if (!window.db) { showToast('⚠️ Firebase ยังไม่พร้อม'); return; }
-  try {
-    await window.setDoc(window.doc(window.db, "events", event.id), {
-      name: event.name,
-      date: event.date,
-      desc: event.desc || '',
-      cover: event.cover || '',
-      photos: event.photos || [],
-      visible: event.visible !== false,
-      createdAt: event.createdAt || window.serverTimestamp()
-    });
     console.log('✅ บันทึก Event ลง Firestore สำเร็จ');
   } catch (err) {
     console.error('❌ บันทึก Event ไม่สำเร็จ:', err);
@@ -1129,48 +1111,6 @@ initCEO();
 // ====== เริ่มต้นระบบเมื่อ Firebase พร้อม ======
 window.startTNK = function() {
   initFirestoreListeners();
-
-  (async function(){
-    const saved = DB.get('tnk_saved_login', null);
-    if (saved) {
-      const users = getUsers();
-      const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
-      if (user) { currentUser = user; await showAdminView(); return; }
-    }
-    if (!currentUser) renderPublicEvents();
-  })();
-};
-
-// ถ้า Firebase พร้อมก่อน ให้เรียก startTNK ทันที
-if (window.firebaseReady) window.startTNK();
-
-// ====== RENDER ======
-function getEvents() { return appData.events; }
-function getRequests() { return appData.requests; }
-
-// ====== USERS & PENDING (localStorage) ======
-function getUsers() { return DB.get('tnk_users', []); }
-function setUsers(u) { DB.set('tnk_users', u); }
-function getPending() { return DB.get('tnk_pending', []); }
-function setPending(p) { DB.set('tnk_pending', p); }
-
-// ====== INIT CEO ======
-function initCEO() {
-  let users = getUsers();
-  if (!users.find(u => u.username === 'CEO')) {
-    users.unshift({
-      id: 'ceo_root', username: 'CEO', password: 'CEO1234',
-      name: 'ชิชิงอน', role: 'CEO', isRoot: true,
-      avatar: null, approved: true
-    });
-    setUsers(users);
-  }
-}
-initCEO();
-
-// ====== เริ่มต้นระบบเมื่อ Firebase พร้อม ======
-window.startTNK = function() {
-  initFirestoreListeners();
   const saved = DB.get('tnk_saved_login', null);
   if (saved) {
     const users = getUsers();
@@ -1186,7 +1126,13 @@ function getEvents() { return appData.events; }
 function getRequests() { return appData.requests; }
 
 function renderPublicEvents() {
-  const events = getEvents().filter(e => e.visible !== false);
+  // ✅ เรียง Event จากใหม่ไปเก่า
+  const sortedEvents = [...getEvents()].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateB - dateA;
+  });
+  const events = sortedEvents.filter(e => e.visible !== false);
   const container = document.getElementById('public-events-list');
   if (!events.length) {
     container.innerHTML = `<div class="no-event-msg"><div class="icon">🌟</div><p>ยังไม่มี EVENT ให้รับชม</p></div>`;
@@ -1195,8 +1141,11 @@ function renderPublicEvents() {
       <div class="event-card" onclick="openEventView('${e.id}','public')">
         <div class="event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
         <div class="event-info">
-          <div class="event-name">${e.name}</div>
-          <div class="event-meta">
+          <div style="text-align: center;">
+            <div class="event-name">${e.name}</div>
+            ${e.desc ? `<div style="font-size: 13px; color: var(--gray); margin-top: 4px;">${e.desc}</div>` : ''}
+          </div>
+          <div class="event-meta" style="justify-content: center;">
             <span>🗓️ ${formatDate(e.date)}</span>
             <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
           </div>
@@ -1204,12 +1153,16 @@ function renderPublicEvents() {
       </div>`).join('')}
     </div>`;
   }
-  const refreshContainer = document.getElementById('refresh-container');
-  if (refreshContainer) refreshContainer.style.display = 'block';
 }
 
 function renderAdminHomeEvents() {
-  const events = getEvents().filter(e => e.visible !== false);
+  // ✅ เรียง Event จากใหม่ไปเก่า
+  const sortedEvents = [...getEvents()].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateB - dateA;
+  });
+  const events = sortedEvents.filter(e => e.visible !== false);
   const container = document.getElementById('admin-home-events');
   if (!events.length) {
     container.innerHTML = `<div class="no-event-msg"><div class="icon">🌟</div><p>ยังไม่มี EVENT ให้รับชม</p></div>`;
@@ -1219,8 +1172,11 @@ function renderAdminHomeEvents() {
     <div class="event-card" onclick="openEventView('${e.id}','admin-home')">
       <div class="event-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
       <div class="event-info">
-        <div class="event-name">${e.name}</div>
-        <div class="event-meta">
+        <div style="text-align: center;">
+          <div class="event-name">${e.name}</div>
+          ${e.desc ? `<div style="font-size: 13px; color: var(--gray); margin-top: 4px;">${e.desc}</div>` : ''}
+        </div>
+        <div class="event-meta" style="justify-content: center;">
           <span>🗓️ ${formatDate(e.date)}</span>
           <span>🖼️ ${(e.photos||[]).length} ภาพ</span>
         </div>
@@ -1244,7 +1200,8 @@ function doLogin() {
   if (!user) { showToast('❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); return; }
   if (!user.approved) { showToast('⏳ บัญชีไม่ได้รับการอนุมัติ'); return; }
   currentUser = user;
-  if (rem) DB.set('tnk_saved_login', { u, p });
+  // ✅ บันทึกสถานะล็อกอินทุกครั้ง (เพื่อให้รีเฟรชแล้วยังอยู่ในระบบ)
+  DB.set('tnk_saved_login', { u, p });
   closeModal('loginModal');
   showAdminView();
   showToast(`✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ${user.name}`);
@@ -1291,14 +1248,15 @@ async function showAdminView() {
   document.getElementById('admin-section-3').classList.add('active');
   const roleMap = { CEO:'👑 CEO', SuperAdmin:'⭐ SuperAdmin', Admin:'👤 Admin' };
   document.getElementById('role-display').textContent = roleMap[currentUser.role] || '👤 Admin';
-  const refreshContainer = document.getElementById('refresh-container');
-  if (refreshContainer) refreshContainer.style.display = 'none';
-  switchTab('home', document.querySelector('.nav-btn'));
+  // ✅ ใช้แท็บที่เคยอยู่ก่อนรีเฟรช ถ้าไม่มีให้ใช้ home
+  const savedTab = localStorage.getItem('tnk_current_tab') || 'home';
+  switchTab(savedTab, document.querySelector(`.nav-btn[onclick*="${savedTab}"]`));
   renderAdminHomeEvents();
   renderDashboard();
   renderMembers();
   renderProfile();
   updateRequestBadge();
+  updateMemberBadge();
 }
 
 function doLogout() {
@@ -1319,6 +1277,9 @@ function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 // ====== TAB SWITCH ======
 function switchTab(tab, btn) {
+  // ✅ ปิด Event View ทุกครั้งที่เปลี่ยนแท็บ
+  document.getElementById('event-view').classList.remove('active');
+  
   ['home','dashboard','request','member','profile'].forEach(t => document.getElementById('tab-'+t).classList.add('hidden'));
   document.getElementById('tab-'+tab).classList.remove('hidden');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -1328,11 +1289,20 @@ function switchTab(tab, btn) {
   if (tab === 'request') renderRequests();
   if (tab === 'home') renderAdminHomeEvents();
   if (tab === 'profile') renderProfile();
+  
+  // ✅ เก็บแท็บปัจจุบันใน localStorage
+  localStorage.setItem('tnk_current_tab', tab);
 }
 
 // ====== DASHBOARD ======
 function renderDashboard() {
-  const events = getEvents();
+  // ✅ เรียง Event จากใหม่ไปเก่า
+  const sortedEvents = [...getEvents()].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateB - dateA;
+  });
+  const events = sortedEvents;
   document.getElementById('event-count-btn').textContent = events.length;
   const container = document.getElementById('admin-events-container');
   if (!events.length) {
@@ -1371,7 +1341,6 @@ async function doCreateEvent() {
   if (!name) { showToast('⚠️ กรุณากรอกชื่อ Event'); return; }
 
   let coverUrl = '';
-  // ตรวจสอบว่ามีการเลือกรูปปกหรือไม่
   if (coverInput.files && coverInput.files.length > 0) {
     try {
       showToast('⬆️ กำลังอัปโหลดรูปปกไป Cloudinary...');
@@ -1385,7 +1354,6 @@ async function doCreateEvent() {
       return;
     }
   } else {
-    // ถ้าไม่มีการเลือกรูปปก ให้ใช้ค่าว่าง
     coverUrl = '';
   }
 
@@ -1395,22 +1363,15 @@ async function doCreateEvent() {
     name,
     date,
     desc,
-    cover: coverUrl,          // ← ตอนนี้เป็น URL หรือค่าว่างเท่านั้น
+    cover: coverUrl,
     photos: [],
     visible: true,
     createdAt: new Date().toISOString()
   };
 
-  // ตรวจสอบขั้นสุดท้ายก่อนส่ง (Debug)
-  if (coverUrl.startsWith('data:')) {
-    showToast('⚠️ ระบบตรวจพบ base64 หยุดบันทึกชั่วคราว');
-    return;
-  }
-
   try {
     await saveEventToFirestore(newEvent);
     closeModal('createEventModal');
-    // ล้างฟอร์ม
     document.getElementById('ce-name').value = '';
     document.getElementById('ce-date').value = '';
     document.getElementById('ce-desc').value = '';
@@ -1468,6 +1429,39 @@ function confirmDeleteEvent() {
   deleteEventFromFirestore(id);
   closeModal('deleteEventModal');
   showToast('🗑️ ลบ Event แล้ว');
+}
+
+// ====== EVENT LIST MODAL ======
+function openEventListModal() {
+  const events = getEvents();
+  const grid = document.getElementById('event-list-grid');
+  if (!events || events.length === 0) {
+    grid.innerHTML = '<div class="no-items">ยังไม่มี Event</div>';
+    openModal('eventListModal');
+    return;
+  }
+  // เรียงลำดับจากใหม่ไปเก่า
+  const sortedEvents = [...events].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateB - dateA;
+  });
+  grid.innerHTML = sortedEvents.map(e => `
+    <div class="event-list-item" onclick="jumpToEvent('${e.id}')">
+      <div class="event-list-cover">${e.cover ? `<img src="${e.cover}" alt="">` : '🖼️'}</div>
+      <div class="event-list-info">
+        <div class="event-list-name">${e.name}</div>
+        <div class="event-list-date">🗓️ ${formatDate(e.date)}</div>
+      </div>
+    </div>
+  `).join('');
+  openModal('eventListModal');
+}
+
+function jumpToEvent(id) {
+  closeModal('eventListModal');
+  const el = document.getElementById('ev-card-' + id);
+  if (el) { setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200); }
 }
 
 // ====== PHOTOS ======
@@ -1581,11 +1575,11 @@ function lightboxDelete() {
 function lightboxDownload() { downloadPhoto(lightboxPhotos[lightboxIndex].data, 'photo_'+lightboxIndex+'.jpg'); }
 
 // ====== MEMBERS ======
-function renderMembers() { renderPending(); renderAllMembers(); }
+function renderMembers() { renderPending(); renderAllMembers(); updateMemberBadge(); }
 function renderPending() {
   const pending = getPending();
   const container = document.getElementById('pending-list');
-  if (!pending.length) { container.innerHTML = '<div class="no-items">ไม่มีผู้สมัคร</div>'; return; }
+  if (!pending.length) { container.innerHTML = '<div class="no-items">ไม่มีผู้สมัคร</div>'; updateMemberBadge(); return; }
   container.innerHTML = pending.map(p => `
     <div class="member-item" id="pend-${p.id}">
       <div class="member-item-top">
@@ -1601,6 +1595,7 @@ function renderPending() {
         <button class="btn-reject" onclick="rejectMember('${p.id}')">❌ ไม่อนุมัติ</button>
       </div>
     </div>`).join('');
+  updateMemberBadge();
 }
 function approveMember(pid) {
   const pending = getPending();
@@ -1652,7 +1647,17 @@ function renderAllMembers() {
   }).join('');
 }
 
-// ฟังก์ชันสมาชิกที่เหลือ (คงเดิม) —> รวมมาให้แล้วข้างบน (canSeePassword, etc.)
+// ====== MEMBER BADGE ======
+function updateMemberBadge() {
+  const cnt = getPending().length;
+  const badge = document.getElementById('member-badge');
+  if (badge) {
+    if (cnt > 0) { badge.textContent = cnt; badge.classList.remove('hidden'); }
+    else { badge.textContent = '0'; badge.classList.add('hidden'); }
+  }
+}
+
+// ====== MEMBER FUNCTIONS (ต่อ) ======
 function canSeePassword() { return currentUser && (currentUser.role === 'CEO' || currentUser.role === 'SuperAdmin'); }
 function canSeePasswordOf(u) { if(!currentUser) return false; if(currentUser.isRoot) return !u.isRoot || u.id===currentUser.id; if(currentUser.role==='CEO') return u.role!=='CEO'||u.id===currentUser.id; return u.id===currentUser.id; }
 function canChangeRoleOf(u) { if(!currentUser) return false; if(u.isRoot) return false; if(u.id===currentUser.id && !currentUser.isRoot) return false; if(currentUser.isRoot) return u.id!==currentUser.id; if(currentUser.role==='CEO' && !currentUser.isRoot) return u.role!=='CEO'; if(currentUser.role==='SuperAdmin') return u.role!=='CEO' && u.role!=='SuperAdmin'; return false; }
