@@ -631,11 +631,18 @@
     </div>
   </div>
   <div class="search-face-box" onclick="document.getElementById('faceSearchInput').click()">
-    <input type="file" id="faceSearchInput" accept="image/*" onchange="handleFaceSearch(this)">
-    <div class="search-face-icon">🔍</div>
-    <div class="search-face-text1">อัพโหลดรูปของคุณ</div>
-    <div class="search-face-text2">ค้นหาทุกภาพของคุณในงานนี้</div>
+  <input type="file" id="faceSearchInput" accept="image/*" onchange="performFaceSearch(this)">
+  <div class="search-face-icon">🔍</div>
+  <div class="search-face-text1">อัพโหลดรูปของคุณ</div>
+  <div class="search-face-text2">ค้นหาทุกภาพของคุณในงานนี้</div>
+</div>
+<div id="face-search-results" style="padding: 0 20px 24px; display: none;">
+  <div class="photos-header">
+    <span class="photos-header-left">👤 ผลการค้นหาใบหน้า</span>
   </div>
+  <hr class="photos-divider">
+  <div class="public-photos-grid" id="face-results-grid"></div>
+</div>
   <div class="public-photos-section" id="public-photos-section">
     <div class="photos-header">
       <span class="photos-header-left">🖼️ รูปภาพทั้งหมด</span>
@@ -943,7 +950,7 @@
 <!-- Firebase SDK (ต้องโหลดก่อน) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBWntP6GH2pCDwc2pVyUhF4cm7QwUumh0w",
@@ -965,6 +972,7 @@
   window.setDoc = setDoc;
   window.deleteDoc = deleteDoc;
   window.serverTimestamp = serverTimestamp;
+  window.getDocs = getDocs;
 
   // ส่งสัญญาณว่า Firebase พร้อมแล้ว
   window.firebaseReady = true;
@@ -1002,6 +1010,48 @@ const DB = {
 // ====== CLOUDINARY ======
 const CLOUDINARY_CLOUD_NAME = 'dbo8prouq';
 const CLOUDINARY_UPLOAD_PRESET = 'tnk_upload';
+
+// ฟังก์ชันส่งรูปไปยัง Hugging Face API เพื่อรับ Face Encoding
+async function getFaceEncoding(file, retryCount = 0) {
+  const formData = new FormData();
+  formData.append('file', file);
+  console.log(`📤 กำลังส่งรูปไปยัง Hugging Face API... (ครั้งที่ ${retryCount + 1})`);
+
+  try {
+    const response = await fetch(
+      'https://api-inference.huggingface.co/models/timesler/facenet-pytorch',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer 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'
+        },
+        body: formData
+      }
+    );
+
+    console.log('📥 สถานะการตอบกลับ:', response.status);
+
+    // ถ้า API ยังไม่พร้อม (503) และเรายังลองไม่เกิน 3 ครั้ง
+    if (response.status === 503 && retryCount < 3) {
+      showToast(`⏳ AI กำลังเริ่มต้น... (ลองใหม่ใน 10 วิ)`);
+      await new Promise(resolve => setTimeout(resolve, 10000)); // รอ 10 วินาที
+      return getFaceEncoding(file, retryCount + 1); // ลองเรียกใหม่
+    }
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Face encoding failed');
+    }
+
+    const data = await response.json();
+    console.log('✅ ได้รับ encoding แล้ว');
+    return data;
+
+  } catch (e) {
+    console.error('❌ การเชื่อมต่อกับ Hugging Face ล้มเหลว:', e.message);
+    throw e;
+  }
+}
 
 async function uploadToCloudinary(file) {
     const fd = new FormData();
@@ -1496,6 +1546,30 @@ async function handlePhotoUpload(input) {
       }
       done++;
       prog.textContent = `⬆️ อัปโหลดแล้ว ${done}/${total} รูป...`;
+      try {
+        if (done === 1 && evIndex !== -1) {
+          showToast('🔍 กำลังวิเคราะห์ใบหน้า...');
+          const encodingData = await getFaceEncoding(files[i]);
+          if (encodingData && encodingData.embedding) {
+            const faceDoc = {
+              encoding: encodingData.embedding,
+              photoId: events[evIndex].photos[events[evIndex].photos.length - 1].id,
+              eventId: id,
+              url: imageUrl
+            };
+            await window.setDoc(
+              window.doc(window.db, 'faceEncodings', faceDoc.photoId),
+              faceDoc
+            );
+            console.log('✅ เก็บ Face Encoding แล้ว');
+          } else {
+            console.warn('⚠️ ไม่พบใบหน้าในรูปนี้');
+          }
+        }
+      } catch (e) {
+        console.warn('การวิเคราะห์ใบหน้าล้มเหลว:', e.message);
+      }
+      // --- จบวิเคราะห์ใบหน้า ---
     } catch (err) { showToast(`❌ รูปที่ ${i+1} ไม่สำเร็จ: ${err.message}`); }
   }
   if (done > 0 && evIndex !== -1) saveEventToFirestore(events[evIndex]);
@@ -1897,9 +1971,81 @@ function handleCoverInput(input, previewId, dataId) {
 }
 
 // ====== FACE SEARCH ======
-function handleFaceSearch(input) {
+// ฟังก์ชันค้นหาใบหน้า
+async function performFaceSearch(input) {
   if (!input.files[0]) return;
-  showToast('🔍 ระบบค้นหาใบหน้ายังอยู่ระหว่างพัฒนา');
+  showToast('🔍 กำลังค้นหาใบหน้า...');
+  console.log('🔍 เริ่มการค้นหาใบหน้า...');
+
+  try {
+    // 1. ขอ encoding จากรูปที่ใช้ค้นหา
+    const encodingData = await getFaceEncoding(input.files[0]);
+    console.log('📊 ข้อมูล encoding ที่ได้:', encodingData);
+    
+    // ตรวจสอบผลลัพธ์
+    if (!encodingData) {
+      showToast('⚠️ ไม่สามารถเชื่อมต่อกับ AI ได้');
+      return;
+    }
+    if (!encodingData.embedding) {
+      showToast('⚠️ ไม่พบใบหน้าในรูป');
+      return;
+    }
+
+    // 2. ดึงข้อมูล encoding ทั้งหมดของ Event นี้จาก Firestore
+    const snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
+    const allEncodings = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.eventId === currentEventView) {
+        allEncodings.push(data);
+      }
+    });
+
+    if (allEncodings.length === 0) {
+      showToast('⚠️ ยังไม่มีข้อมูลใบหน้าใน Event นี้');
+      return;
+    }
+
+    // 3. เปรียบเทียบระยะห่าง (Euclidean distance)
+    const threshold = 0.6;
+    const matchedPhotoIds = [];
+    for (const enc of allEncodings) {
+      let sum = 0;
+      for (let i = 0; i < encodingData.embedding.length; i++) {
+        sum += Math.pow(encodingData.embedding[i] - enc.encoding[i], 2);
+      }
+      if (Math.sqrt(sum) < threshold) {
+        matchedPhotoIds.push(enc.photoId);
+      }
+    }
+
+    // 4. แสดงรูปที่ตรงกัน
+    const ev = getEvents().find(x => x.id === currentEventView);
+    if (!ev) return;
+    const matchedPhotos = ev.photos.filter(p => matchedPhotoIds.includes(p.id));
+    const grid = document.getElementById('face-results-grid');
+    const resultsContainer = document.getElementById('face-search-results');
+
+    if (matchedPhotos.length === 0) {
+      grid.innerHTML = '<div class="no-items">🔍 ไม่พบรูปที่ตรงกัน</div>';
+    } else {
+      grid.innerHTML = matchedPhotos.map(ph => `
+        <div class="pub-photo-wrap">
+          <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${currentEventView}'),${ev.photos.indexOf(ph)},'${currentEventView}')">
+            <img src="${ph.data}" alt="">
+          </div>
+          <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo.jpg')">⬇️</button>
+        </div>
+      `).join('');
+    }
+    resultsContainer.style.display = 'block';
+    showToast(`✅ พบ ${matchedPhotos.length} รูปที่ตรงกัน`);
+
+  } catch (e) {
+    console.error('❌ การค้นหาล้มเหลว:', e.message);
+    showToast('⚠️ ค้นหาไม่สำเร็จ: ' + e.message);
+  }
 }
 
 // ====== DOWNLOAD ======
