@@ -501,6 +501,7 @@
   .modal-box::-webkit-scrollbar { width: 4px; }
   .modal-box::-webkit-scrollbar-thumb { background: var(--gold-light); border-radius: 4px; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 <body>
 
@@ -1011,44 +1012,97 @@ const DB = {
 const CLOUDINARY_CLOUD_NAME = 'dbo8prouq';
 const CLOUDINARY_UPLOAD_PRESET = 'tnk_upload';
 
-async function getFaceEncoding(file, retryCount = 0) {
-  const formData = new FormData();
-  formData.append('file', file);
-  console.log(`📤 กำลังส่งรูปไปยัง Hugging Face API... (ครั้งที่ ${retryCount + 1})`);
+// ====== FACE SEARCH (Client-Side SSD MobileNet V1 inputSize 416) ======
+let faceApiModelsLoaded = false;
 
-  const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api-inference.huggingface.co/models/timesler/facenet-pytorch');
+async function loadFaceApiModels() {
+  if (faceApiModelsLoaded) return;
+  const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+  try {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    faceApiModelsLoaded = true;
+    console.log('✅ โมเดลพร้อม');
+  } catch (e) {
+    console.error('❌ โหลดโมเดลไม่สำเร็จ:', e);
+  }
+}
+loadFaceApiModels();
+
+async function getFaceEncoding(file) {
+  if (!faceApiModelsLoaded) {
+    showToast('⏳ กำลังโหลดโมเดล...');
+    await loadFaceApiModels();
+    if (!faceApiModelsLoaded) throw new Error('โมเดลไม่พร้อม');
+  }
+  const img = await faceapi.bufferToImage(file);
+  // ใช้ Options แบบเดียวกับโค้ดทดสอบที่แม่นยำ (default inputSize)
+  const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+  const detection = await faceapi.detectSingleFace(img, options)
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+  if (!detection) throw new Error('No face detected');
+  return { embedding: Array.from(detection.descriptor) };
+}
+
+async function performFaceSearch(input) {
+  if (!input.files[0]) return;
+  showToast('🔍 กำลังค้นหาใบหน้า...');
 
   try {
-    const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer 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'
-      },
-      body: formData
+    // probe descriptor
+    const probeImg = await faceapi.bufferToImage(input.files[0]);
+    const probeOptions = new faceapi.SsdMobilenetv1Options({ inputSize: 416, minConfidence: 0.5 });
+    const probeDet = await faceapi.detectSingleFace(probeImg, probeOptions)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!probeDet) { showToast('⚠️ ไม่พบใบหน้าในรูป'); return; }
+    const probeDesc = probeDet.descriptor;
+
+    // ดึงข้อมูลจาก Firestore
+    const snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
+    const threshold = 0.45;
+    const matchedPhotoIds = [];
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.eventId !== currentEventView) return;
+      const encodings = data.encodings || [data.encoding];
+      for (const enc of encodings) {
+        const dist = faceapi.euclideanDistance(probeDesc, enc);
+        if (dist < threshold) {
+          matchedPhotoIds.push(data.photoId);
+          break;
+        }
+      }
     });
 
-    console.log('📥 สถานะการตอบกลับ:', response.status);
+    // แสดงผลลัพธ์
+    const ev = getEvents().find(x => x.id === currentEventView);
+    if (!ev) return;
+    const matchedPhotos = ev.photos.filter(p => matchedPhotoIds.includes(p.id));
+    const grid = document.getElementById('face-results-grid');
+    const resultsContainer = document.getElementById('face-search-results');
 
-    if (response.status === 503 && retryCount < 3) {
-      showToast(`⏳ AI กำลังเริ่มต้น... (ลองใหม่ใน 10 วิ)`);
-      await new Promise(resolve => setTimeout(resolve, 10000));
-      return getFaceEncoding(file, retryCount + 1);
+    if (matchedPhotos.length === 0) {
+      grid.innerHTML = '<div class="no-items">🔍 ไม่พบรูปที่ตรงกัน</div>';
+    } else {
+      grid.innerHTML = matchedPhotos.map(ph => `
+        <div class="pub-photo-wrap">
+          <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${currentEventView}'),${ev.photos.indexOf(ph)},'${currentEventView}')">
+            <img src="${ph.data}" alt="">
+          </div>
+          <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo.jpg')">⬇️</button>
+        </div>
+      `).join('');
     }
+    resultsContainer.style.display = 'block';
+    showToast(`✅ พบ ${matchedPhotos.length} รูปที่ตรงกัน`);
 
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      const text = await response.text();
-      throw new Error('เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง: ' + text.substring(0, 100));
-    }
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || data.message || 'Face encoding failed');
-
-    console.log('✅ ได้รับ encoding แล้ว');
-    return data;
   } catch (e) {
-    console.error('❌ การเชื่อมต่อกับ Hugging Face ล้มเหลว:', e.message);
-    throw e;
+    console.error(e);
+    showToast('⚠️ ค้นหาไม่สำเร็จ: ' + e.message);
   }
 }
 
@@ -1548,19 +1602,22 @@ async function handlePhotoUpload(input) {
       try {
         if (done === 1 && evIndex !== -1) {
           showToast('🔍 กำลังวิเคราะห์ใบหน้า...');
-          const encodingData = await getFaceEncoding(files[i]);
-          if (encodingData && encodingData.embedding) {
+          const img = await faceapi.bufferToImage(files[i]);
+          const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+          const detections = await faceapi.detectAllFaces(img, options)
+            .withFaceLandmarks()
+            .withFaceDescriptors();   // plural!
+
+          if (detections.length > 0) {
+            const encodings = detections.map(d => Array.from(d.descriptor));
             const faceDoc = {
-              encoding: encodingData.embedding,
+              encodings: encodings,          // array of descriptors
               photoId: events[evIndex].photos[events[evIndex].photos.length - 1].id,
               eventId: id,
               url: imageUrl
             };
-            await window.setDoc(
-              window.doc(window.db, 'faceEncodings', faceDoc.photoId),
-              faceDoc
-            );
-            console.log('✅ เก็บ Face Encoding แล้ว');
+            await window.setDoc(window.doc(window.db, 'faceEncodings', faceDoc.photoId), faceDoc);
+            console.log(`✅ เก็บ ${detections.length} ใบหน้าแล้ว`);
           } else {
             console.warn('⚠️ ไม่พบใบหน้าในรูปนี้');
           }
@@ -1937,52 +1994,37 @@ function handleCoverInput(input, previewId, dataId) {
 async function performFaceSearch(input) {
   if (!input.files[0]) return;
   showToast('🔍 กำลังค้นหาใบหน้า...');
-  console.log('🔍 เริ่มการค้นหาใบหน้า...');
 
   try {
-    // 1. ขอ encoding จากรูปที่ใช้ค้นหา
-    const encodingData = await getFaceEncoding(input.files[0]);
-    console.log('📊 ข้อมูล encoding ที่ได้:', encodingData);
-    
-    // ตรวจสอบผลลัพธ์
-    if (!encodingData) {
-      showToast('⚠️ ไม่สามารถเชื่อมต่อกับ AI ได้');
-      return;
-    }
-    if (!encodingData.embedding) {
-      showToast('⚠️ ไม่พบใบหน้าในรูป');
-      return;
-    }
+    // Probe descriptor
+    const probeImg = await faceapi.bufferToImage(input.files[0]);
+    const probeOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+    const probeDet = await faceapi.detectSingleFace(probeImg, probeOptions)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!probeDet) { showToast('⚠️ ไม่พบใบหน้าในรูป'); return; }
+    const probeDesc = probeDet.descriptor;
 
-    // 2. ดึงข้อมูล encoding ทั้งหมดของ Event นี้จาก Firestore
+    // ดึงข้อมูลจาก Firestore
     const snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
-    const allEncodings = [];
+    const threshold = 0.45;
+    const matchedPhotoIds = [];
+
     snapshot.forEach(doc => {
       const data = doc.data();
-      if (data.eventId === currentEventView) {
-        allEncodings.push(data);
+      if (data.eventId !== currentEventView) return;
+      // รองรับข้อมูลเก่า (single) และใหม่ (multi)
+      const encodings = data.encodings || [data.encoding];
+      for (const enc of encodings) {
+        const dist = faceapi.euclideanDistance(probeDesc, enc);
+        if (dist < threshold) {
+          matchedPhotoIds.push(data.photoId);
+          break;
+        }
       }
     });
 
-    if (allEncodings.length === 0) {
-      showToast('⚠️ ยังไม่มีข้อมูลใบหน้าใน Event นี้');
-      return;
-    }
-
-    // 3. เปรียบเทียบระยะห่าง (Euclidean distance)
-    const threshold = 0.6;
-    const matchedPhotoIds = [];
-    for (const enc of allEncodings) {
-      let sum = 0;
-      for (let i = 0; i < encodingData.embedding.length; i++) {
-        sum += Math.pow(encodingData.embedding[i] - enc.encoding[i], 2);
-      }
-      if (Math.sqrt(sum) < threshold) {
-        matchedPhotoIds.push(enc.photoId);
-      }
-    }
-
-    // 4. แสดงรูปที่ตรงกัน
+    // แสดงผล
     const ev = getEvents().find(x => x.id === currentEventView);
     if (!ev) return;
     const matchedPhotos = ev.photos.filter(p => matchedPhotoIds.includes(p.id));
@@ -2005,7 +2047,7 @@ async function performFaceSearch(input) {
     showToast(`✅ พบ ${matchedPhotos.length} รูปที่ตรงกัน`);
 
   } catch (e) {
-    console.error('❌ การค้นหาล้มเหลว:', e.message);
+    console.error(e);
     showToast('⚠️ ค้นหาไม่สำเร็จ: ' + e.message);
   }
 }
