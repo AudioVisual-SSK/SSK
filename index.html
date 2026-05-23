@@ -1011,42 +1011,41 @@ const DB = {
 const CLOUDINARY_CLOUD_NAME = 'dbo8prouq';
 const CLOUDINARY_UPLOAD_PRESET = 'tnk_upload';
 
-// ฟังก์ชันส่งรูปไปยัง Hugging Face API เพื่อรับ Face Encoding
 async function getFaceEncoding(file, retryCount = 0) {
   const formData = new FormData();
   formData.append('file', file);
   console.log(`📤 กำลังส่งรูปไปยัง Hugging Face API... (ครั้งที่ ${retryCount + 1})`);
 
+  const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api-inference.huggingface.co/models/timesler/facenet-pytorch');
+
   try {
-    const response = await fetch(
-      'https://api-inference.huggingface.co/models/timesler/facenet-pytorch',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer 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'
-        },
-        body: formData
-      }
-    );
+    const response = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer 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'
+      },
+      body: formData
+    });
 
     console.log('📥 สถานะการตอบกลับ:', response.status);
 
-    // ถ้า API ยังไม่พร้อม (503) และเรายังลองไม่เกิน 3 ครั้ง
     if (response.status === 503 && retryCount < 3) {
       showToast(`⏳ AI กำลังเริ่มต้น... (ลองใหม่ใน 10 วิ)`);
-      await new Promise(resolve => setTimeout(resolve, 10000)); // รอ 10 วินาที
-      return getFaceEncoding(file, retryCount + 1); // ลองเรียกใหม่
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      return getFaceEncoding(file, retryCount + 1);
     }
 
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || 'Face encoding failed');
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error('เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง: ' + text.substring(0, 100));
     }
 
     const data = await response.json();
+    if (!response.ok) throw new Error(data.error || data.message || 'Face encoding failed');
+
     console.log('✅ ได้รับ encoding แล้ว');
     return data;
-
   } catch (e) {
     console.error('❌ การเชื่อมต่อกับ Hugging Face ล้มเหลว:', e.message);
     throw e;
@@ -1579,23 +1578,6 @@ async function handlePhotoUpload(input) {
   input.value = '';
 }
 
-function openPhotosModal(id) {
-  document.getElementById('photos-event-id').value = id;
-  const ev = getEvents().find(x => x.id === id);
-  const photos = ev ? (ev.photos || []) : [];
-  const grid = document.getElementById('photos-grid');
-  if (!photos.length) { grid.innerHTML = '<div class="no-items">ยังไม่มีรูปภาพ</div>'; }
-  else {
-    grid.innerHTML = photos.map((ph, i) => `
-      <div class="photo-thumb-wrap" id="phtw-${ph.id}">
-        <div class="photo-thumb" onclick="openLightboxAdmin('${id}',${i})">${`<img src="${ph.data}" alt="">`}</div>
-        <div class="photo-tick" id="tick-${ph.id}" onclick="togglePhotoTick('${ph.id}')"></div>
-        <button class="photo-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${i+1}.jpg')">⬇️</button>
-      </div>`).join('');
-  }
-  openModal('photosModal');
-}
-
 function togglePhotoTick(pid) {
   const el = document.getElementById('tick-'+pid);
   el.classList.toggle('checked');
@@ -1814,26 +1796,6 @@ function saveProfile() {
   showToast('✅ บันทึกข้อมูลเรียบร้อย');
 }
 
-// ====== EVENT VIEW ======
-function openEventView(id, mode) {
-  const ev = getEvents().find(x => x.id === id);
-  if (!ev) return;
-  currentEventView = id;
-  document.getElementById('ev-cover').innerHTML = ev.cover ? `<img src="${ev.cover}" alt="">` : '🖼️';
-  document.getElementById('ev-name').textContent = ev.name;
-  document.getElementById('ev-meta').innerHTML = `<span>🗓️ ${formatDate(ev.date)}</span><span>🖼️ ${(ev.photos||[]).length} ภาพ</span>`;
-  const grid = document.getElementById('public-photos-grid');
-  grid.innerHTML = (ev.photos||[]).map((ph, i) => `
-    <div class="pub-photo-wrap">
-      <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${id}'),${i},'${id}')"><img src="${ph.data}" alt=""></div>
-      <div class="pub-tick" id="pub-tick-${ph.id}" onclick="togglePubTick('${ph.id}')"></div>
-      <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${i+1}.jpg')">⬇️</button>
-    </div>`).join('');
-  document.getElementById('event-view').classList.add('active');
-  if (mode === 'public') { document.getElementById('header-section').style.display = 'none'; document.getElementById('gold-section').style.display = 'none'; }
-  else { document.getElementById('admin-section-3').classList.remove('active'); }
-  window.scrollTo({ top: 0 });
-}
 function getEventPhotos(id) { const ev = getEvents().find(x => x.id === id); return ev ? (ev.photos || []) : []; }
 function closeEventView() {
   document.getElementById('event-view').classList.remove('active');
