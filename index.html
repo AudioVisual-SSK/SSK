@@ -1609,13 +1609,17 @@ async function handlePhotoUpload(input) {
             .withFaceDescriptors();   // plural!
 
           if (detections.length > 0) {
-            const encodings = detections.map(d => Array.from(d.descriptor));
-            const faceDoc = {
-              encodings: encodings,          // array of descriptors
-              photoId: events[evIndex].photos[events[evIndex].photos.length - 1].id,
-              eventId: id,
-              url: imageUrl
-            };
+            // เปลี่ยนจาก Array ของ Arrays เป็น Object (Firestore ไม่อนุญาต nested array)
+const encodingsObj = {};
+detections.forEach((d, idx) => {
+  encodingsObj[idx] = Array.from(d.descriptor);
+});
+const faceDoc = {
+  encodings: encodingsObj,
+  photoId: events[evIndex].photos[events[evIndex].photos.length - 1].id,
+  eventId: id,
+  url: imageUrl
+};
             await window.setDoc(window.doc(window.db, 'faceEncodings', faceDoc.photoId), faceDoc);
             console.log(`✅ เก็บ ${detections.length} ใบหน้าแล้ว`);
           } else {
@@ -2014,7 +2018,9 @@ async function performFaceSearch(input) {
       const data = doc.data();
       if (data.eventId !== currentEventView) return;
       // รองรับข้อมูลเก่า (single) และใหม่ (multi)
-      const encodings = data.encodings || [data.encoding];
+      const encodings = data.encodings 
+  ? Object.values(data.encodings)  // เปลี่ยน Object กลับเป็น Array ของ Descriptors
+  : (data.encoding ? [data.encoding] : []); // รองรับข้อมูลเก่า (single)
       for (const enc of encodings) {
         const dist = faceapi.euclideanDistance(probeDesc, enc);
         if (dist < threshold) {
