@@ -709,6 +709,27 @@
   input[type="file"] { display: none; }
   .modal-box::-webkit-scrollbar { width: 4px; }
   .modal-box::-webkit-scrollbar-thumb { background: var(--gold-light); border-radius: 4px; }
+  /* ====== แก้หน้าแอดมินเลื่อนซ้าย-ขวา ====== */
+#admin-divider {
+  margin: 0 !important;
+  width: 100%;
+}
+
+/* ตัด overflow ซ้าย-ขวาทุกส่วน */
+body {
+  overflow-x: hidden !important;
+}
+
+#admin-section-2,
+#admin-section-3 {
+  overflow-x: hidden;
+}
+
+/* จัดการปุ่มแถวล่างไม่ให้มี scroll bar */
+.admin-event-actions2 {
+  overflow-x: hidden;
+  flex-wrap: wrap;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
