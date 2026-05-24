@@ -1062,7 +1062,7 @@ async function performFaceSearch(input) {
 
     // ดึงข้อมูลจาก Firestore
     const snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
-    const threshold = 0.45;
+    const threshold = 0.5;
     const matchedPhotoIds = [];
 
     snapshot.forEach(doc => {
@@ -2011,7 +2011,7 @@ async function performFaceSearch(input) {
 
     // ดึงข้อมูลจาก Firestore
     const snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
-    const threshold = 0.45;
+    const threshold = 0.5;
     const matchedPhotoIds = [];
 
     snapshot.forEach(doc => {
