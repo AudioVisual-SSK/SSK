@@ -1600,7 +1600,7 @@ async function handlePhotoUpload(input) {
       done++;
       prog.textContent = `⬆️ อัปโหลดแล้ว ${done}/${total} รูป...`;
       try {
-        if (done === 1 && evIndex !== -1) {
+        if (evIndex !== -1) {
           showToast('🔍 กำลังวิเคราะห์ใบหน้า...');
           const img = await faceapi.bufferToImage(files[i]);
           const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
