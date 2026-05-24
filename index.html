@@ -531,7 +531,7 @@
 }
 
 /* ตัวรูปภาพ */
-.lightbox-img {
+.lightbox-img, canvas.lightbox-img {
   max-width: 90vw;
   max-height: 65vh;
   object-fit: contain;
@@ -730,6 +730,26 @@ body {
   overflow-x: hidden;
   flex-wrap: wrap;
 }
+/* ====== PROFILE BLOCK ====== */
+.profile-block {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--gold-light);
+  margin-bottom: 18px;
+}
+#face-search-status {
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+#btn-close-search:hover {
+  background: var(--gold-dark);
+  transform: scale(1.05);
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
@@ -867,9 +887,14 @@ body {
   <div class="search-face-text1">อัพโหลดรูปของคุณ</div>
   <div class="search-face-text2">ค้นหาทุกภาพของคุณในงานนี้</div>
 </div>
+<div id="face-search-status" style="text-align:center; padding:10px 20px; display:none; font-family:'Sarabun',sans-serif; font-size:14px; color:var(--gray);"></div>
+<div id="face-search-status" style="text-align:center; padding:10px 20px; display:none; font-family:'Sarabun',sans-serif; font-size:14px; color:var(--gray);"></div>
 <div id="face-search-results" style="padding: 0 20px 24px; display: none;">
-  <div class="photos-header">
+  <div class="photos-header" style="display:flex; justify-content:space-between; align-items:center;">
     <span class="photos-header-left">👤 ผลการค้นหาใบหน้า</span>
+    <button id="btn-close-search" onclick="closeFaceSearch()" style="padding:6px 12px; border-radius:8px; background:var(--gold); color:white; border:none; font-family:'Sarabun',sans-serif; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+      ✕ ปิดการค้นหา
+    </button>
   </div>
   <hr class="photos-divider">
   <div class="public-photos-grid" id="face-results-grid"></div>
@@ -1306,29 +1331,72 @@ async function getFaceEncoding(file) {
 
 async function performFaceSearch(input) {
   if (!input.files[0]) return;
-  showToast('🔍 กำลังค้นหาใบหน้า...');
+  
+  var statusEl = document.getElementById('face-search-status');
+  var resultsEl = document.getElementById('face-search-results');
+  var resultsGrid = document.getElementById('face-results-grid');
+  
+  // แสดงสถานะกำลังค้นหา
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '⏳ ระบบกำลังค้นหาใบหน้าของท่าน...';
+  }
+  if (resultsEl) resultsEl.style.display = 'none';
+  if (resultsGrid) resultsGrid.innerHTML = '';
+  
+  // ตั้งเวลา timeout 30 วินาที
+  var timeoutId = setTimeout(function() {
+    if (statusEl) {
+      statusEl.innerHTML = '⚠️ การค้นหาใช้เวลานานผิดปกติ กรุณารีเฟรชหน้าเว็บแล้วลองอีกครั้ง';
+    }
+  }, 30000);
 
   try {
     // probe descriptor
-    const probeImg = await faceapi.bufferToImage(input.files[0]);
-    const probeOptions = new faceapi.SsdMobilenetv1Options({ inputSize: 416, minConfidence: 0.5 });
-    const probeDet = await faceapi.detectSingleFace(probeImg, probeOptions)
+    var probeImg = await faceapi.bufferToImage(input.files[0]);
+    var probeOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+    var probeDet = await faceapi.detectSingleFace(probeImg, probeOptions)
       .withFaceLandmarks()
       .withFaceDescriptor();
-    if (!probeDet) { showToast('⚠️ ไม่พบใบหน้าในรูป'); return; }
-    const probeDesc = probeDet.descriptor;
+      
+    if (!probeDet) { 
+      clearTimeout(timeoutId);
+      if (statusEl) statusEl.innerHTML = '⚠️ ไม่พบใบหน้าในรูปภาพ กรุณาลองใช้รูปภาพที่มีใบหน้าชัดเจน';
+      return;
+    }
+    var probeDesc = probeDet.descriptor;
 
-    // ดึงข้อมูลจาก Firestore
-    const snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
-    const threshold = 0.5;
-    const matchedPhotoIds = [];
+    if (statusEl) statusEl.innerHTML = '🔍 กำลังเปรียบเทียบกับภาพทั้งหมดในอีเวนต์...';
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
+    var snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
+    
+    var ev = getEvents().find(x => x.id === currentEventView);
+    if (!ev) { clearTimeout(timeoutId); return; }
+    var threshold = ev.faceSearchThreshold ?? 0.45;
+    if (threshold === -1) {
+      clearTimeout(timeoutId);
+      if (statusEl) statusEl.innerHTML = '🚫 อีเวนต์นี้ปิดการค้นหาใบหน้า';
+      return;
+    }
+
+    var matchedPhotoIds = [];
+
+    snapshot.forEach(function(doc) {
+      var data = doc.data();
       if (data.eventId !== currentEventView) return;
-      const encodings = data.encodings || [data.encoding];
-      for (const enc of encodings) {
-        const dist = faceapi.euclideanDistance(probeDesc, enc);
+      var encodings = [];
+      if (data.encodings) {
+        if (Array.isArray(data.encodings)) {
+          encodings = data.encodings;
+        } else {
+          encodings = Object.values(data.encodings);
+        }
+      } else if (data.encoding) {
+        encodings = [data.encoding];
+      }
+      
+      for (var i = 0; i < encodings.length; i++) {
+        var dist = faceapi.euclideanDistance(probeDesc, encodings[i]);
         if (dist < threshold) {
           matchedPhotoIds.push(data.photoId);
           break;
@@ -1336,31 +1404,32 @@ async function performFaceSearch(input) {
       }
     });
 
-    // แสดงผลลัพธ์
-    const ev = getEvents().find(x => x.id === currentEventView);
-    if (!ev) return;
-    const matchedPhotos = ev.photos.filter(p => matchedPhotoIds.includes(p.id));
-    const grid = document.getElementById('face-results-grid');
-    const resultsContainer = document.getElementById('face-search-results');
+    clearTimeout(timeoutId);
+
+    // ส่วนของการแสดงผล
+    var matchedPhotos = ev.photos.filter(function(p) { return matchedPhotoIds.indexOf(p.id) !== -1; });
 
     if (matchedPhotos.length === 0) {
-      grid.innerHTML = '<div class="no-items">🔍 ไม่พบรูปที่ตรงกัน</div>';
+      if (statusEl) statusEl.innerHTML = '🔍 ไม่พบรูปภาพที่ตรงกับใบหน้าของท่านในอีเวนต์นี้';
+      if (resultsEl) resultsEl.style.display = 'none';
     } else {
-      grid.innerHTML = matchedPhotos.map(ph => `
-        <div class="pub-photo-wrap">
-          <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${currentEventView}'),${ev.photos.indexOf(ph)},'${currentEventView}')">
-            <img src="${ph.data}" alt="">
-          </div>
-          <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo.jpg')">⬇️</button>
-        </div>
-      `).join('');
+      if (statusEl) statusEl.innerHTML = '✅ พบ ' + matchedPhotos.length + ' รูปภาพที่ตรงกับใบหน้าของท่าน';
+      if (resultsEl) resultsEl.style.display = 'block';
+      
+      var grid = document.getElementById('face-results-grid');
+      grid.innerHTML = matchedPhotos.map(function(ph) {
+        return '<div class="pub-photo-wrap">' +
+          '<div class="pub-photo" onclick="openLightboxPublic(getEventPhotos(\'' + currentEventView + '\'),' + ev.photos.indexOf(ph) + ',\'' + currentEventView + '\')">' +
+          '<img src="' + ph.data + '" alt=""></div>' +
+          '<button class="pub-dl-btn" onclick="downloadPhoto(\'' + ph.data + '\',\'photo.jpg\')">⬇️</button>' +
+          '</div>';
+      }).join('');
     }
-    resultsContainer.style.display = 'block';
-    showToast(`✅ พบ ${matchedPhotos.length} รูปที่ตรงกัน`);
 
   } catch (e) {
+    clearTimeout(timeoutId);
     console.error(e);
-    showToast('⚠️ ค้นหาไม่สำเร็จ: ' + e.message);
+    if (statusEl) statusEl.innerHTML = '❌ การค้นหาไม่สำเร็จ กรุณารีเฟรชหน้าเว็บแล้วลองใหม่อีกครั้ง';
   }
 }
 
@@ -1990,15 +2059,68 @@ function openLightboxPublic(photos, idx, eventId) {
   document.getElementById('lb-del-btn').textContent = '⚠️ แจ้งลบรูปภาพ';
   showLightbox();
 }
+// Preload รูปไว้ล่วงหน้า
+var preloadedImg = new Image();
+var preloadedIndex = -1;
+
+function preloadPhoto(index) {
+  if (index >= 0 && index < lightboxPhotos.length && index !== preloadedIndex) {
+    preloadedImg.src = lightboxPhotos[index].data;
+    preloadedIndex = index;
+  }
+}
+
 function showLightbox() {
   if (!lightboxPhotos.length) return;
-  document.getElementById('lb-img').src = lightboxPhotos[lightboxIndex].data;
-  lightboxPhotoId = lightboxPhotos[lightboxIndex].id;
+  
+  var currentPhoto = lightboxPhotos[lightboxIndex];
+  if (!currentPhoto) return;
+
+  // ปิดปุ่มชั่วคราวระหว่างโหลด
+  var prevBtn = document.querySelector('.lightbox-controls .lb-btn:first-child');
+  var nextBtn = document.querySelector('.lightbox-controls .lb-btn:last-child');
+  if (prevBtn) prevBtn.disabled = true;
+  if (nextBtn) nextBtn.disabled = true;
+
+  // Preload รูปก่อนหน้าและถัดไป
+  preloadPhoto(lightboxIndex - 1);
+  preloadPhoto(lightboxIndex + 1);
+
+  var lbImg = document.getElementById('lb-img');
+  var canvas = document.getElementById('lb-canvas');
+  
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'lb-canvas';
+    canvas.className = 'lightbox-img';
+    canvas.style.maxWidth = '90vw';
+    canvas.style.maxHeight = '65vh';
+    lbImg.parentNode.replaceChild(canvas, lbImg);
+  }
+
+  var ctx = canvas.getContext('2d');
+  var img = new Image();
+  img.onload = function() {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    if (prevBtn) prevBtn.disabled = false;
+    if (nextBtn) nextBtn.disabled = false;
+  };
+  img.src = currentPhoto.data;
+  
   document.getElementById('lightbox').classList.add('active');
 }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
-function lightboxPrev() { lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length; showLightbox(); }
-function lightboxNext() { lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length; showLightbox(); }
+function lightboxPrev() { 
+  lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length;
+  showLightbox(); 
+}
+
+function lightboxNext() { 
+  lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length;
+  showLightbox(); 
+}
 function lightboxDelete() {
   if (lightboxMode === 'admin') {
     const events = getEvents();
@@ -2115,14 +2237,62 @@ function saveMemberEdit() { const uid = document.getElementById('em-id').value; 
 function renderProfile() {
   if (!currentUser) return;
   const u = getUsers().find(x => x.id === currentUser.id) || currentUser;
+  
+  // รูปโปรไฟล์
   const avatarEl = document.getElementById('profile-avatar-display');
-  avatarEl.innerHTML = u.avatar ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : '👤';
+  avatarEl.innerHTML = u.avatar 
+    ? `<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` 
+    : '👤';
+  
+  // ชื่อผู้ใช้
   document.getElementById('profile-username-display').textContent = u.username;
   document.getElementById('profile-username-edit').value = u.username;
-  if (u.isRoot) { document.getElementById('profile-username-display').classList.add('hidden'); document.getElementById('profile-username-edit').classList.remove('hidden'); }
-  else { document.getElementById('profile-username-display').classList.remove('hidden'); document.getElementById('profile-username-edit').classList.add('hidden'); }
+  if (u.isRoot) { 
+    document.getElementById('profile-username-display').classList.add('hidden'); 
+    document.getElementById('profile-username-edit').classList.remove('hidden'); 
+  } else { 
+    document.getElementById('profile-username-display').classList.remove('hidden'); 
+    document.getElementById('profile-username-edit').classList.add('hidden'); 
+  }
+  
+  // ชื่อ
   document.getElementById('profile-name-edit').value = u.name;
-  document.getElementById('profile-password-edit').value = '';
+  
+  // ✅ ซ่อนช่องรหัสผ่านเก่า (และ label ของมัน)
+  var oldPassField = document.getElementById('profile-password-edit');
+  if (oldPassField) {
+    var parent = oldPassField.closest('.profile-field');
+    if (parent) parent.style.display = 'none';
+  }
+
+  // ----- สร้างกรอบเปลี่ยนรหัสผ่านใหม่ -----
+  var oldBlock = document.getElementById('password-change-block');
+  if (oldBlock) oldBlock.remove();
+
+  var section = document.querySelector('#tab-profile .profile-section');
+  if (section) {
+    var block = document.createElement('div');
+    block.id = 'password-change-block';
+    block.className = 'profile-block';
+    block.style.marginTop = '20px';
+    block.innerHTML = `
+      <div class="block-title">🔑 เปลี่ยนรหัสผ่าน</div>
+      <div class="profile-field">
+        <label>รหัสผ่านปัจจุบัน</label>
+        <input class="form-input" id="profile-old-pass" type="password" placeholder="กรอกรหัสผ่านปัจจุบัน">
+      </div>
+      <div class="profile-field">
+        <label>รหัสผ่านใหม่</label>
+        <input class="form-input" id="profile-new-pass" type="password" placeholder="กรอกรหัสผ่านใหม่">
+      </div>
+      <div class="profile-field">
+        <label>ยืนยันรหัสผ่านใหม่</label>
+        <input class="form-input" id="profile-confirm-pass" type="password" placeholder="ยืนยันรหัสผ่านใหม่">
+      </div>
+      <button class="btn-primary" onclick="updatePassword()" style="background:var(--gold-dark);">🔐 อัปเดทรหัสผ่าน</button>
+    `;
+    section.appendChild(block);
+  }
 }
 function handleProfileAvatarChange(input) {
   if (!input.files[0]) return;
@@ -2139,7 +2309,8 @@ function saveProfile() {
   const idx = users.findIndex(u => u.id === currentUser.id);
   if (idx < 0) return;
   const newName = document.getElementById('profile-name-edit').value.trim();
-  const newPass = document.getElementById('profile-password-edit').value.trim();
+  var pwField = document.getElementById('profile-password-edit');
+  var newPass = pwField ? pwField.value.trim() : '';
   const newAvatar = document.getElementById('profile-avatar-display').dataset.newAvatar;
   if (currentUser.isRoot) { const newUser = document.getElementById('profile-username-edit').value.trim(); if (newUser) users[idx].username = newUser; }
   if (newName) users[idx].name = newName;
@@ -2150,6 +2321,118 @@ function saveProfile() {
   renderProfile();
   renderMembers();
   showToast('✅ บันทึกข้อมูลเรียบร้อย');
+}
+function updatePassword() {
+  if (!currentUser) return;
+
+  var oldP = document.getElementById('profile-old-pass').value.trim();
+  var newP = document.getElementById('profile-new-pass').value.trim();
+  var confirmP = document.getElementById('profile-confirm-pass').value.trim();
+
+  if (!oldP || !newP || !confirmP) {
+    showToast('⚠️ กรุณากรอกให้ครบทั้ง 3 ช่อง');
+    return;
+  }
+
+  var users = getUsers();
+  var idx = users.findIndex(u => u.id === currentUser.id);
+  if (idx < 0) return;
+
+  if (users[idx].password !== oldP) {
+    showToast('❌ รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    return;
+  }
+
+  if (newP !== confirmP) {
+    showToast('❌ รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน');
+    return;
+  }
+
+  users[idx].password = newP;
+  setUsers(users);
+  currentUser = users[idx];
+
+  document.getElementById('profile-old-pass').value = '';
+  document.getElementById('profile-new-pass').value = '';
+  document.getElementById('profile-confirm-pass').value = '';
+
+  showToast('✅ เปลี่ยนรหัสผ่านเรียบร้อย');
+}
+
+// ฟังก์ชันเปลี่ยนรหัสผ่าน
+function updatePassword() {
+  if (!currentUser) return;
+
+  var oldP = document.getElementById('profile-old-pass').value.trim();
+  var newP = document.getElementById('profile-new-pass').value.trim();
+  var confirmP = document.getElementById('profile-confirm-pass').value.trim();
+
+  if (!oldP || !newP || !confirmP) {
+    showToast('⚠️ กรุณากรอกให้ครบทั้ง 3 ช่อง');
+    return;
+  }
+
+  var users = getUsers();
+  var idx = users.findIndex(u => u.id === currentUser.id);
+  if (idx < 0) return;
+
+  if (users[idx].password !== oldP) {
+    showToast('❌ รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    return;
+  }
+
+  if (newP !== confirmP) {
+    showToast('❌ รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน');
+    return;
+  }
+
+  users[idx].password = newPass;
+  setUsers(users);
+  currentUser = users[idx];
+
+  document.getElementById('profile-old-pass').value = '';
+  document.getElementById('profile-new-pass').value = '';
+  document.getElementById('profile-confirm-pass').value = '';
+
+  showToast('✅ เปลี่ยนรหัสผ่านเรียบร้อย');
+}
+
+// ฟังก์ชันเปลี่ยนรหัสผ่าน
+function updatePassword() {
+  if (!currentUser) return;
+
+  var oldP = document.getElementById('profile-old-pass').value.trim();
+  var newP = document.getElementById('profile-new-pass').value.trim();
+  var confirmP = document.getElementById('profile-confirm-pass').value.trim();
+
+  if (!oldP || !newP || !confirmP) {
+    showToast('⚠️ กรุณากรอกให้ครบทั้ง 3 ช่อง');
+    return;
+  }
+
+  var users = getUsers();
+  var idx = users.findIndex(u => u.id === currentUser.id);
+  if (idx < 0) return;
+
+  if (users[idx].password !== oldP) {
+    showToast('❌ รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    return;
+  }
+
+  if (newP !== confirmP) {
+    showToast('❌ รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน');
+    return;
+  }
+
+  users[idx].password = newP;
+  setUsers(users);
+  currentUser = users[idx];
+
+  document.getElementById('profile-old-pass').value = '';
+  document.getElementById('profile-new-pass').value = '';
+  document.getElementById('profile-confirm-pass').value = '';
+
+  showToast('✅ เปลี่ยนรหัสผ่านเรียบร้อย');
 }
 
 function getEventPhotos(id) { const ev = getEvents().find(x => x.id === id); return ev ? (ev.photos || []) : []; }
@@ -2246,6 +2529,20 @@ function openEventView(id, mode) {
   currentEventPage = 1;
 renderEventPhotos(1);
 
+  // ตรวจสอบว่า Event นี้ปิดการค้นหาใบหน้าหรือไม่
+var faceSearchBox = document.querySelector('.search-face-box');
+var faceResults = document.getElementById('face-search-results');
+
+if (ev.faceSearchThreshold === -1) {
+  // ถ้าปิดการค้นหา → ซ่อนกล่องค้นหาและผลลัพธ์
+  if (faceSearchBox) faceSearchBox.style.display = 'none';
+  if (faceResults) faceResults.style.display = 'none';
+} else {
+  // ถ้าเปิดการค้นหา → แสดงกล่องค้นหา (และซ่อนผลลัพธ์เก่า)
+  if (faceSearchBox) faceSearchBox.style.display = '';
+  if (faceResults) faceResults.style.display = 'none';
+}
+  
   document.getElementById('event-view').classList.add('active');
 
   // จัดการการแสดงผล header
@@ -2405,14 +2702,16 @@ async function performFaceSearch(input) {
     if (matchedPhotos.length === 0) {
       grid.innerHTML = '<div class="no-items">🔍 ไม่พบรูปที่ตรงกัน</div>';
     } else {
-      grid.innerHTML = matchedPhotos.map(ph => `
-        <div class="pub-photo-wrap">
-          <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${currentEventView}'),${ev.photos.indexOf(ph)},'${currentEventView}')">
-            <img src="${ph.data}" alt="">
-          </div>
-          <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo.jpg')">⬇️</button>
-        </div>
-      `).join('');
+      // เก็บผลลัพธ์ไว้ใน window เพื่อให้ Lightbox เข้าถึงได้
+window.currentMatchedPhotos = matchedPhotos;
+
+grid.innerHTML = matchedPhotos.map(function(ph, i) {
+  return '<div class="pub-photo-wrap">' +
+    '<div class="pub-photo" onclick="openLightboxPublic(window.currentMatchedPhotos, ' + i + ', \'' + currentEventView + '\')">' +
+    '<img src="' + ph.data + '" alt=""></div>' +
+    '<button class="pub-dl-btn" onclick="downloadPhoto(\'' + ph.data + '\',\'photo.jpg\')">⬇️</button>' +
+    '</div>';
+}).join('');
     }
     resultsContainer.style.display = 'block';
     showToast(`✅ พบ ${matchedPhotos.length} รูปที่ตรงกัน`);
@@ -2421,6 +2720,28 @@ async function performFaceSearch(input) {
     console.error(e);
     showToast('⚠️ ค้นหาไม่สำเร็จ: ' + e.message);
   }
+}
+
+// ฟังก์ชันปิดผลลัพธ์การค้นหาใบหน้า
+function closeFaceSearch() {
+  var resultsContainer = document.getElementById('face-search-results');
+  var statusEl = document.getElementById('face-search-status');
+  
+  // ซ่อนผลลัพธ์และข้อความสถานะ
+  if (resultsContainer) resultsContainer.style.display = 'none';
+  if (statusEl) {
+    statusEl.style.display = 'none';
+    statusEl.innerHTML = '';
+  }
+  
+  // ล้างไฟล์ใน input ค้นหา
+  var searchInput = document.getElementById('faceSearchInput');
+  if (searchInput) searchInput.value = '';
+  
+  // ล้างผลลัพธ์ที่เก็บไว้ใน window
+  window.currentMatchedPhotos = [];
+  
+  showToast('✅ ปิดผลการค้นหาเรียบร้อย');
 }
 
 // ====== DOWNLOAD ======
