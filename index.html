@@ -2105,8 +2105,11 @@ function setUsers(u) { DB.set('tnk_users', u); }
 function getPending() { return DB.get('tnk_pending', []); }
 function setPending(p) { DB.set('tnk_pending', p); }
 
-// ====== RESET CEO (ล้าง CEO เดิมทั้งหมด แล้วสร้างใหม่) ======
-function resetCEO() {
+// ====== RESET CEO ครั้งเดียว (ล้าง CEO เดิมทั้งหมด แล้วสร้างใหม่ แค่ครั้งแรก) ======
+function resetCEOSingle() {
+  // ตรวจสอบว่าเคยล้างแล้วหรือยัง
+  if (localStorage.getItem('ceo_reset_done') === 'true') return;
+
   let users = getUsers();
   
   // 1. ลบ users ทุกคนที่มี role === 'CEO' และ isRoot === true ออก
@@ -2132,16 +2135,19 @@ function resetCEO() {
     currentUser = newCEO;
   }
   
-  console.log('✅ ล้าง CEO เดิมทั้งหมด และสร้าง CEO ใหม่เรียบร้อย:', newCEO.username);
+  // 4. ตั้ง flag ว่าได้ล้างแล้ว
+  localStorage.setItem('ceo_reset_done', 'true');
+  
+  console.log('✅ ล้าง CEO เดิมทั้งหมด (ครั้งแรก) และสร้าง CEO ใหม่เรียบร้อย:', newCEO.username);
 }
 
-// เรียกใช้งานทันที (แทนที่ initCEO เดิม)
-resetCEO();
+// เรียกใช้งานครั้งแรก (แต่ข้างในจะมีเช็ค flag อีกที)
+resetCEOSingle();
 
 // ====== เริ่มต้นระบบเมื่อ Firebase พร้อม ======
 // แก้ไข window.startTNK (ส่วนที่มีอยู่แล้ว)
 window.startTNK = function() {
-  resetCEO();   // ← เปลี่ยนเป็น resetCEO แทน
+  // resetCEOSingle();   // ไม่ต้องเรียกอีก เพราะเรียกไปแล้วข้างต้น (หรือจะเรียกไว้ก็ได้ แต่ flag ป้องกัน)
   initFirestoreListeners();
   initGlobalSettingsListener();
   initDisplaySettingsListener();
