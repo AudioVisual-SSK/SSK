@@ -204,13 +204,15 @@
   .remember-row input { accent-color: var(--gold); width: 15px; height: 15px; cursor: pointer; }
 
   #admin-header {
-    display: none;
-    background: var(--white);
-    padding: 28px 20px 16px;
-    text-align: center;
-    position: sticky; top: 0; z-index: 200;
-    border-bottom: 1px solid #eee;
-  }
+  display: none;
+  background: var(--white);
+  padding: 18px 20px 12px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  border-bottom: 2px solid var(--gold-dark);
+}
   #admin-header.active { display: block; }
   .admin-header-top { display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
   .btn-manage {
@@ -231,11 +233,10 @@
   .btn-logout:hover { background: #c53030; color: white; }
 
   #admin-section-2 {
-    display: none;
-    background: var(--gold-bg);
-    padding: 20px 20px 0;
-    border-top: 4px solid var(--gold-divider);
-  }
+  display: none;
+  background: var(--gold-bg);
+  padding: 10px 20px 0;
+}
   #admin-section-2.active { display: block; }
   .role-title {
   font-family: 'Cinzel Decorative', cursive;
@@ -245,18 +246,77 @@
   padding: 4px 0 8px;
   text-shadow: 1px 1px 0 rgba(201,168,76,0.3);
 }
-  .nav-buttons {
-    display: flex; gap: 8px; justify-content: center;
-    flex-wrap: wrap; padding-bottom: 0;
-  }
-  .nav-btn {
-    padding: 10px 22px; border-radius: 10px; font-family:'Sarabun',sans-serif;
-    font-size: 14px; font-weight: 600; cursor: pointer;
-    background: white; border: 1.5px solid var(--gold-light); color: var(--gray);
-    transition: all 0.2s;
-  }
-  .nav-btn.active { background: var(--gold); border-color: var(--gold-dark); color: white; box-shadow: 0 2px 8px rgba(201,168,76,0.4); }
-  .nav-btn:hover:not(.active) { border-color: var(--gold); color: var(--gold-dark); }
+  /* ปรับ Grid Container */
+.nav-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  justify-items: center;
+  padding: 0 8px 0 8px;
+  margin-bottom: 8px;
+}
+
+/* ปุ่มหลัก */
+.nav-btn {
+  width: 100%;
+  padding: 10px 12px;
+  min-height: 48px;
+  border-radius: 10px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: white;
+  border: 1.5px solid var(--gold-light);
+  color: var(--gray);
+  transition: all 0.2s;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Wrapper สำหรับปุ่มที่มี Badge */
+.nav-btn-wrap {
+  display: block;
+  width: 100%;
+  position: relative;
+}
+
+.nav-btn-wrap .nav-btn {
+  width: 100%;
+}
+
+/* สถานะ active และ hover คงเดิม */
+.nav-btn.active {
+  background: var(--gold);
+  color: white;
+  border-color: var(--gold-dark);
+  box-shadow: 0 2px 8px rgba(201,168,76,0.4);
+}
+
+.nav-btn:hover:not(.active) {
+  border-color: var(--gold);
+  color: var(--gold-dark);
+}
+
+/* Badge (ปรับตำแหน่งเล็กน้อย) */
+.request-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--red);
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
   .nav-divider { height: 3px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin-top: 16px; }
 
   #admin-section-3 { display: none; background: var(--gold-bg); padding: 24px 20px 40px; min-height: 60vh; }
@@ -750,6 +810,289 @@ body {
   background: var(--gold-dark);
   transform: scale(1.05);
 }
+/* ====== ปรับแต่ง Admin Header ให้กะทัดรัด ====== */
+#admin-header .logo-tnk {
+  font-size: clamp(32px, 7vw, 48px) !important;
+  letter-spacing: 4px !important;
+}
+
+#admin-header .logo-official {
+  font-size: clamp(11px, 2.5vw, 14px) !important;
+  letter-spacing: 4px !important;
+}
+
+.admin-header-top {
+  margin-top: 4px !important;
+  gap: 10px !important;
+}
+
+.btn-manage,
+.btn-logout {
+  padding: 6px 18px !important;
+  font-size: 12px !important;
+}
+/* ====== SETTINGS & STATS ====== */
+.settings-section, .stats-section { max-width: 500px; margin: 0 auto; background: white; border-radius: 20px; padding: 20px; box-shadow: var(--shadow); border: 1.5px solid var(--gold-light); }
+/* Container ของแท็บ settings */
+.settings-tabs {
+  display: flex;
+  gap: 6px;                 /* ← ลดลงเล็กน้อย */
+  margin-bottom: 20px;
+  flex-wrap: nowrap;        /* ← คงไว้ */
+  justify-content: center;
+  overflow-x: auto;         /* ← คงไว้ (เลื่อนได้เมื่อจำเป็น) */
+  padding-bottom: 4px;
+}
+
+/* ปุ่มแท็บแต่ละปุ่ม */
+.settings-tab {
+  flex: 0 0 auto;            /* ← ไม่ยืด ไม่หด ตามขนาดเนื้อหา */
+  min-width: 55px;           /* ← เล็กลง */
+  max-width: 70px;           /* ← จำกัดความกว้าง */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;                  /* ← ลดช่องว่าง */
+  padding: 6px 4px;          /* ← ลด padding */
+  border-radius: 10px;       /* ← โค้งน้อยลงเล็กน้อย */
+  border: 1.5px solid var(--gold-light);
+  background: white;
+  font-family: 'Sarabun', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+/* ไอคอน */
+.settings-tab .tab-icon {
+  font-size: 18px;          /* ← เล็กลง */
+  line-height: 1;
+}
+.settings-tab .tab-text {
+  font-size: 10px;          /* ← เล็กลง */
+  font-weight: 600;
+  color: var(--gray);
+}
+
+/* สถานะ active */
+.settings-tab.active {
+  background: var(--gold);
+  border-color: var(--gold-dark);
+  box-shadow: 0 3px 8px rgba(201,168,76,0.3);
+}
+.settings-tab.active .tab-text {
+  color: white;
+}
+.settings-tab.active .tab-icon {
+  filter: brightness(0) invert(1);
+}
+
+/* สถานะ hover */
+.settings-tab:hover:not(.active) {
+  background: var(--gold-light);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+.settings-tab:hover:not(.active) .tab-text {
+  color: var(--gold-dark);
+}
+
+/* responsive สำหรับหน้าจอเล็กมาก */
+@media (max-width: 500px) {
+  .event-threshold-grid {
+    grid-template-columns: 1fr;
+  }
+}
+  .settings-tab .tab-icon {
+    font-size: 18px;
+  }
+  .settings-tab .tab-text {
+    font-size: 9px;
+  }
+}
+
+.stats-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.stat-card { flex: 1 1 100px; background: var(--gold-bg); border-radius: 12px; padding: 14px 10px; text-align: center; }
+.stat-number { font-family: 'Cinzel Decorative', cursive; font-size: 24px; color: var(--gold-dark); font-weight: 900; }
+.stat-label { font-family: 'Sarabun', sans-serif; font-size: 12px; color: var(--gray); margin-top: 4px; }
+/* ====== กริดสำหรับปรับ Threshold ราย Event (2 คอลัมน์) ====== */
+.event-threshold-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* การ์ดแต่ละอีเวนต์ – ขนาดเท่ากับ event-list-item ใน Dashboard */
+.threshold-event-card {
+  width: calc(50% - 6px);           /* 2 คอลัมน์เท่าๆ กัน */
+  background: var(--white);
+  border-radius: 12px;              /* มนเล็กน้อยเหมือน event-list-item */
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--gold-light);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.threshold-event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* รูปปกเล็ก – สูง 90px เหมือนใน Event ทั้งหมด */
+.threshold-event-cover {
+  height: 90px;
+  background: var(--gold-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 28px;                  /* ขนาดไอคอนเมื่อไม่มีรูป */
+}
+
+.threshold-event-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ส่วนข้อมูลด้านล่าง (ชื่อ, วันที่) */
+.threshold-event-info {
+  padding: 8px;
+  background: white;
+  text-align: center;
+}
+
+/* ชื่ออีเวนต์ – ตัวหนา เล็ก */
+.threshold-event-name {
+  font-family: 'Sarabun', sans-serif;   /* ให้เหมือน event-list-name */
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--black);
+  margin-bottom: 3px;
+}
+
+/* วันที่ – เล็ก สีเทา */
+.threshold-event-date {
+  font-size: 11px;
+  color: var(--gray);
+}
+
+/* ปุ่ม “ปรับระดับ” – เล็ก สีทองอ่อน */
+.threshold-event-btn {
+  margin: 6px 8px 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--gold-light);
+  border: 1px solid var(--gold);
+  color: var(--gold-dark);
+  font-family: 'Sarabun', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  display: block;
+}
+
+.threshold-event-btn:hover {
+  background: var(--gold);
+  color: white;
+}
+
+/* กรอบใหญ่ครอบทั้งหมด (ที่แยกออกมา) */
+#event-threshold-wrapper {
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: var(--shadow-lg);
+  border: 2px solid var(--gold);
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#event-threshold-wrapper .settings-card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold-dark);
+  margin-bottom: 20px;
+  border-left: 5px solid var(--gold);
+  padding-left: 16px;
+}
+/* Storage Progress Bar */
+#storage-usage-card {
+  background: linear-gradient(135deg, #ffffff 0%, #FBF3DC 100%);
+  border: 1px solid var(--gold-light);
+}
+#storage-usage-container div:first-child {
+  font-weight: 500;
+}
+/* ====== กรอบใหญ่สำหรับปรับ Threshold ราย Event ====== */
+#event-threshold-wrapper {
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: var(--shadow-lg);
+  border: 2px solid var(--gold);
+  max-width: 900px;           /* กว้างกว่ากรอบตั้งค่าเดิม */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#event-threshold-wrapper .settings-card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold-dark);
+  margin-bottom: 20px;
+  border-left: 5px solid var(--gold);
+  padding-left: 16px;
+}
+/* ====== SETTINGS INFO CARDS (Firebase / Cloudinary / System) ====== */
+.settings-info-card {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid var(--gold-light);
+  box-shadow: 0 4px 16px rgba(201,168,76,0.15);
+  transition: box-shadow 0.2s;
+}
+.settings-info-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light), var(--gold));
+}
+.settings-info-card:hover {
+  box-shadow: 0 6px 24px rgba(201,168,76,0.28);
+}
+.settings-info-card .settings-card-title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  color: var(--gold-dark);
+  border-left: 4px solid var(--gold);
+  padding-left: 10px;
+}
+#eventDetailModal .modal-box.large {
+  max-width: 600px;
+  width: 90%;
+  border-radius: 24px;
+}
+.modal-box.large .modal-body {
+  padding: 18px 22px 24px;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
@@ -788,18 +1131,21 @@ body {
 <div id="admin-section-2">
   <div class="role-title" id="role-display">👑 CEO</div>
   <div class="nav-buttons">
-    <button class="nav-btn active" onclick="switchTab('home',this)">Home</button>
-    <button class="nav-btn" onclick="switchTab('dashboard',this)">Dashboard</button>
-    <div class="nav-btn-wrap">
-      <button class="nav-btn" onclick="switchTab('request',this)" id="nav-request-btn">Request</button>
-      <span class="request-badge hidden" id="request-badge">0</span>
-    </div>
-    <div class="nav-btn-wrap">
-  <button class="nav-btn" onclick="switchTab('member',this)" id="nav-member-btn">Member</button>
-  <span class="request-badge hidden" id="member-badge">0</span>
-</div>
-    <button class="nav-btn" onclick="switchTab('profile',this)">Profile</button>
+  <!-- แถวบน 3 ปุ่ม -->
+  <button class="nav-btn active" onclick="switchTab('home',this)">Home</button>
+  <button class="nav-btn" onclick="switchTab('dashboard',this)">Dashboard</button>
+  <div class="nav-btn-wrap">
+    <button class="nav-btn" onclick="switchTab('request',this)" id="nav-request-btn">Request</button>
+    <span class="request-badge hidden" id="request-badge">0</span>
   </div>
+  <!-- แถวล่าง 3 ปุ่ม -->
+  <button class="nav-btn" onclick="switchTab('settings',this)"> Settings</button>
+  <div class="nav-btn-wrap">
+    <button class="nav-btn" onclick="switchTab('member',this)" id="nav-member-btn">Member</button>
+    <span class="request-badge hidden" id="member-badge">0</span>
+  </div>
+  <button class="nav-btn" onclick="switchTab('profile',this)">Profile</button>
+</div>
   <div class="nav-divider"></div>
 </div>
 
@@ -841,6 +1187,54 @@ body {
       </div>
     </div>
   </div>
+  <!-- SETTINGS tab -->
+<div id="tab-settings" class="hidden">
+  <div class="settings-section">
+    <!-- ✅ ตรงนี้คือส่วนของปุ่ม 4 ปุ่ม ต้องมีเสมอ -->
+    <div class="settings-tabs">
+      <button class="settings-tab active" onclick="switchSettingsTab('facesearch', this)">
+        <span class="tab-icon">🔍</span>
+        <span class="tab-text">Face Search</span>
+      </button>
+      <button class="settings-tab" onclick="switchSettingsTab('display', this)">
+        <span class="tab-icon">🖼️</span>
+        <span class="tab-text">Display</span>
+      </button>
+      <button class="settings-tab" onclick="switchSettingsTab('integrations', this)">
+        <span class="tab-icon">☁️</span>
+        <span class="tab-text">Integrations</span>
+      </button>
+      <button class="settings-tab" onclick="switchSettingsTab('statistics', this)">
+        <span class="tab-icon">📊</span>
+        <span class="tab-text">Statistics</span>
+      </button>
+    </div>
+    <!-- ✅ จบส่วนปุ่ม -->
+
+    <!-- พื้นที่สำหรับเนื้อหาของแท็บนั้น ๆ -->
+    <div class="settings-content" id="settings-content">
+      <div class="no-items">เลือกหัวข้อด้านบน</div>
+    </div>
+  </div>
+
+  <!-- ✅ กรอบใหญ่แยกสำหรับ Event Threshold (ใส่ไว้ด้านนอก settings-section) -->
+  <div id="event-threshold-wrapper" style="display: none;">
+    <div class="settings-card-title">🎚️ ปรับ Threshold </div>
+    <div id="event-threshold-list" class="event-threshold-grid"></div>
+  </div>
+</div>
+
+<!-- STATS tab (สำหรับแสดงสถิติแบบแยก) -->
+<div id="tab-stats" class="hidden">
+  <div class="stats-section">
+    <div class="stats-block">
+      <div class="block-title">📊 สถิติระบบ</div>
+      <div id="stats-content">
+        <div class="no-items">กำลังโหลด...</div>
+      </div>
+    </div>
+  </div>
+</div>
   <!-- PROFILE tab -->
   <div id="tab-profile" class="hidden">
     <div class="profile-section">
@@ -887,7 +1281,6 @@ body {
   <div class="search-face-text1">อัพโหลดรูปของคุณ</div>
   <div class="search-face-text2">ค้นหาทุกภาพของคุณในงานนี้</div>
 </div>
-<div id="face-search-status" style="text-align:center; padding:10px 20px; display:none; font-family:'Sarabun',sans-serif; font-size:14px; color:var(--gray);"></div>
 <div id="face-search-status" style="text-align:center; padding:10px 20px; display:none; font-family:'Sarabun',sans-serif; font-size:14px; color:var(--gray);"></div>
 <div id="face-search-results" style="padding: 0 20px 24px; display: none;">
   <div class="photos-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -1233,12 +1626,12 @@ body {
 <!-- Firebase SDK (ต้องโหลดก่อน) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBWntP6GH2pCDwc2pVyUhF4cm7QwUumh0w",
     authDomain: "tnk-events-d1983.firebaseapp.com",
-    projectId: "tnk-events-d1983",
+    projectId:"tnk-events-d1983",
     storageBucket: "tnk-events-d1983.firebasestorage.app",
     messagingSenderId: "690992959407",
     appId: "1:690992959407:web:1e52c321c67ddf5289695a"
@@ -1256,6 +1649,7 @@ body {
   window.deleteDoc = deleteDoc;
   window.serverTimestamp = serverTimestamp;
   window.getDocs = getDocs;
+  window.getDoc = getDoc;   // ← เพิ่มบรรทัดนี้
 
   // ส่งสัญญาณว่า Firebase พร้อมแล้ว
   window.firebaseReady = true;
@@ -1272,6 +1666,10 @@ let lightboxEventId = null;
 let lightboxPhotoId = null;
 let currentEventView = null;
 let currentEventPage = 1;
+
+// ====== DISPLAY SETTINGS (Firestore) ======
+let currentDisplaySettings = { photosPerPage: 20, avgImageSizeMB: 1.5 };
+let displaySettingsUnsubscribe = null;
 
 // ======= STORAGE =======
 const DB = {
@@ -1294,6 +1692,14 @@ const DB = {
 // ====== CLOUDINARY ======
 const CLOUDINARY_CLOUD_NAME = 'dbo8prouq';
 const CLOUDINARY_UPLOAD_PRESET = 'tnk_upload';
+
+// ====== GLOBAL CLOUDINARY CREDENTIALS (เผื่อใช้ในหน้า Integrations) ======
+window.cloudinaryApiKey = localStorage.getItem('cloudinary_api_key') || '';
+window.cloudinaryApiSecret = localStorage.getItem('cloudinary_api_secret') || '';
+
+// ====== CLOUDINARY API CREDENTIALS (Global + localStorage) ======
+window.cloudinaryApiKey = localStorage.getItem('cloudinary_api_key') || '';
+window.cloudinaryApiSecret = localStorage.getItem('cloudinary_api_secret') || '';
 
 // ====== FACE SEARCH (Client-Side SSD MobileNet V1 inputSize 416) ======
 let faceApiModelsLoaded = false;
@@ -1445,6 +1851,96 @@ async function uploadToCloudinary(file) {
 
 // ====== APP DATA (Firestore) ======
 let appData = { events: [], requests: [] };
+// ====== GLOBAL SETTINGS (Firestore) ======
+let globalSettingsUnsubscribe = null;
+let currentGlobalSettings = { defaultThreshold: 0.45 };
+
+function initGlobalSettingsListener() {
+  if (!window.db) {
+    setTimeout(initGlobalSettingsListener, 500);
+    return;
+  }
+  const docRef = window.doc(window.db, "systemSettings", "faceSearchConfig");
+  globalSettingsUnsubscribe = window.onSnapshot(docRef, (docSnap) => {
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    currentGlobalSettings.defaultThreshold = data.defaultThreshold !== undefined ? data.defaultThreshold : 0.45;
+  } else {
+    window.setDoc(docRef, { defaultThreshold: 0.45 }).catch(console.error);
+    currentGlobalSettings.defaultThreshold = 0.45;
+  }
+  
+  // ✅ อัปเดต dropdown และข้อความถ้า element มีอยู่ในหน้า
+  const selectEl = document.getElementById('settings-default-threshold');
+  if (selectEl) {
+    selectEl.value = currentGlobalSettings.defaultThreshold;
+  }
+  const valSpan = document.getElementById('current-default-threshold-value');
+  if (valSpan) {
+    if (currentGlobalSettings.defaultThreshold === -1) {
+      valSpan.textContent = '🚫 ไม่อนุญาตให้ค้นหาใบหน้า';
+    } else {
+      valSpan.textContent = currentGlobalSettings.defaultThreshold;
+    }
+  }
+});
+}
+
+function initDisplaySettingsListener() {
+  if (!window.db) {
+    console.warn('Firebase ยังไม่พร้อม รอสักครู่');
+    setTimeout(initDisplaySettingsListener, 500);
+    return;
+  }
+  const docRef = window.doc(window.db, "systemSettings", "displayConfig");
+  displaySettingsUnsubscribe = window.onSnapshot(docRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      currentDisplaySettings.photosPerPage = data.photosPerPage !== undefined ? data.photosPerPage : 20;
+      currentDisplaySettings.avgImageSizeMB = data.avgImageSizeMB !== undefined ? data.avgImageSizeMB : 1.5;
+    } else {
+      window.setDoc(docRef, { photosPerPage: 20, avgImageSizeMB: 1.5 }).catch(console.error);
+      currentDisplaySettings.photosPerPage = 20;
+      currentDisplaySettings.avgImageSizeMB = 1.5;
+    }
+    // อัปเดต UI
+    updateStorageUsage();
+    if (document.getElementById('settings-photos-per-page')) {
+      document.getElementById('settings-photos-per-page').value = currentDisplaySettings.photosPerPage;
+    }
+    if (document.getElementById('settings-avg-image-size')) {
+      document.getElementById('settings-avg-image-size').value = currentDisplaySettings.avgImageSizeMB;
+    }
+    if (currentEventView) {
+      renderEventPhotos(currentEventPage);
+    }
+  }, (err) => {
+    console.error('Error loading display settings:', err);
+  });
+}
+
+async function saveDisplaySettings() {
+  const perPage = parseInt(document.getElementById('settings-photos-per-page').value);
+  const avgSize = parseFloat(document.getElementById('settings-avg-image-size').value);
+  if (isNaN(perPage) || perPage < 1) {
+    showToast('⚠️ กรุณาใส่จำนวนรูปต่อหน้า (อย่างน้อย 1)');
+    return;
+  }
+  if (isNaN(avgSize) || avgSize < 0.1) {
+    showToast('⚠️ กรุณาใส่ขนาดไฟล์เฉลี่ยที่ถูกต้อง');
+    return;
+  }
+  try {
+    await window.setDoc(window.doc(window.db, "systemSettings", "displayConfig"), {
+      photosPerPage: perPage,
+      avgImageSizeMB: avgSize
+    }, { merge: true });
+    showToast('✅ บันทึกการตั้งค่า Display เรียบร้อย (ทุกคนเห็นเหมือนกัน)');
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
+  }
+}
 
 function initFirestoreListeners() {
   if (!window.db) { console.warn('Firebase ยังไม่พร้อม'); return; }
@@ -1457,6 +1953,8 @@ function initFirestoreListeners() {
       events.push({ id: docSnap.id, ...data });
     });
     appData.events = events;
+    updateStorageUsage();
+    if (document.getElementById('event-threshold-list')) renderEventThresholdList();
     if (currentUser) {
       renderAdminHomeEvents();
       renderDashboard();
@@ -1474,6 +1972,89 @@ function initFirestoreListeners() {
     updateRequestBadge();
     if (currentUser) renderRequests();
   });
+}
+
+// ====== CLOUDINARY REAL STORAGE USAGE ======
+let cloudinaryApiKey = localStorage.getItem('cloudinary_api_key') || '';
+let cloudinaryApiSecret = localStorage.getItem('cloudinary_api_secret') || '';
+
+// ====== CLOUDINARY REAL STORAGE USAGE ======
+async function fetchCloudinaryStorage() {
+  if (!window.cloudinaryApiKey || !window.cloudinaryApiSecret) {
+    return { error: 'missing_keys' };
+  }
+  const credentials = btoa(`${window.cloudinaryApiKey}:${window.cloudinaryApiSecret}`);
+  try {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/usage`, {
+      headers: { 'Authorization': `Basic ${credentials}` }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error('Cloudinary API error:', err);
+    return { error: err.message };
+  }
+}
+
+async function updateCloudinaryStorageUI() {
+  const container = document.getElementById('real-cloudinary-storage');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center; padding:20px;">⏳ กำลังดึงข้อมูลจาก Cloudinary...</div>';
+  const data = await fetchCloudinaryStorage();
+  if (data.error === 'missing_keys') {
+    container.innerHTML = `<div style="color: var(--gray); text-align:center; padding:12px;">⚠️ กรุณากรอก Cloudinary API Key และ API Secret ด้านล่าง</div>`;
+    return;
+  }
+  if (data.error) {
+    container.innerHTML = `<div style="color: red; text-align:center;">❌ ดึงข้อมูลไม่สำเร็จ: ${data.error}</div>`;
+    return;
+  }
+  const usageBytes = data.storage?.usage || 0;
+  const usageGB = (usageBytes / (1024 ** 3)).toFixed(2);
+  const totalGB = 25; // แผนฟรี 25GB
+  const percent = (usageBytes / (totalGB * 1024 ** 3)) * 100;
+  const remainingGB = (totalGB - usageGB).toFixed(2);
+  let statusColor = '#38a169', statusText = '✅ พื้นที่เพียงพอ';
+  if (percent >= 90) { statusColor = '#e53e3e'; statusText = '🔥 พื้นที่ใกล้เต็มมาก (ควรรีบล้าง/สำรองข้อมูล)'; }
+  else if (percent >= 80) { statusColor = '#e53e3e'; statusText = '⚠️ พื้นที่ใกล้เต็ม (ควรลบรูปหรือเพิ่มแผน)'; }
+  else if (percent >= 60) { statusColor = '#ed8936'; statusText = '🟡 พื้นที่เริ่มจำกัด'; }
+  container.innerHTML = `
+    <div style="margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-weight: 600;">📊 พื้นที่จัดเก็บจริง (Cloudinary)</span>
+        <span>${usageGB} GB / ${totalGB} GB (${percent.toFixed(1)}%)</span>
+      </div>
+      <div style="background: #e2e8f0; border-radius: 12px; height: 12px; overflow: hidden;">
+        <div style="width: ${Math.min(100, percent)}%; background: ${statusColor}; height: 100%; border-radius: 12px; transition: width 0.3s;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px;">
+        <span>📦 พื้นที่ว่าง: ${remainingGB} GB</span>
+        <span style="color: ${statusColor};">${statusText}</span>
+      </div>
+      <div style="font-size: 11px; color: var(--gray); margin-top: 6px;">
+        🔐 ข้อมูลดึงจาก Cloudinary API (แผนฟรี 25 GB)
+      </div>
+    </div>
+    <div style="margin-top: 8px;">
+      <button onclick="updateCloudinaryStorageUI()" style="background: var(--gold); border: none; padding: 6px 12px; border-radius: 8px; color: white; cursor: pointer;">🔄 รีเฟรชข้อมูล</button>
+    </div>
+  `;
+}
+
+function saveCloudinaryCredentials() {
+  const key = document.getElementById('cloudinary-api-key').value.trim();
+  const secret = document.getElementById('cloudinary-api-secret').value.trim();
+  if (!key || !secret) {
+    showToast('⚠️ กรุณากรอกทั้ง API Key และ API Secret');
+    return;
+  }
+  window.cloudinaryApiKey = key;
+  window.cloudinaryApiSecret = secret;
+  localStorage.setItem('cloudinary_api_key', key);
+  localStorage.setItem('cloudinary_api_secret', secret);
+  showToast('✅ บันทึก API Key/Secret เรียบร้อย');
+  updateCloudinaryStorageUI();
 }
 
 async function saveEventToFirestore(event) {
@@ -1524,23 +2105,46 @@ function setUsers(u) { DB.set('tnk_users', u); }
 function getPending() { return DB.get('tnk_pending', []); }
 function setPending(p) { DB.set('tnk_pending', p); }
 
-// ====== INIT CEO ======
-function initCEO() {
+// ====== RESET CEO (ล้าง CEO เดิมทั้งหมด แล้วสร้างใหม่) ======
+function resetCEO() {
   let users = getUsers();
-  if (!users.find(u => u.username === 'CEO')) {
-    users.unshift({
-      id: 'ceo_root', username: 'CEO', password: 'CEO1234',
-      name: 'ชิชิงอน', role: 'CEO', isRoot: true,
-      avatar: null, approved: true
-    });
-    setUsers(users);
+  
+  // 1. ลบ users ทุกคนที่มี role === 'CEO' และ isRoot === true ออก
+  const newUsers = users.filter(u => !(u.role === 'CEO' && u.isRoot === true));
+  
+  // 2. สร้าง CEO คนใหม่ตามสเปก
+  const newCEO = {
+    id: 'ceo_root_' + Date.now(),
+    username: 'CEO',
+    password: 'CEO1234',
+    name: 'Thanakon',
+    role: 'CEO',
+    isRoot: true,
+    avatar: null,
+    approved: true
+  };
+  
+  newUsers.push(newCEO);
+  setUsers(newUsers);
+  
+  // 3. ถ้า currentUser โดนลบ ให้เซ็ตเป็น CEO คนใหม่
+  if (currentUser && !newUsers.find(u => u.id === currentUser.id)) {
+    currentUser = newCEO;
   }
+  
+  console.log('✅ ล้าง CEO เดิมทั้งหมด และสร้าง CEO ใหม่เรียบร้อย:', newCEO.username);
 }
-initCEO();
+
+// เรียกใช้งานทันที (แทนที่ initCEO เดิม)
+resetCEO();
 
 // ====== เริ่มต้นระบบเมื่อ Firebase พร้อม ======
+// แก้ไข window.startTNK (ส่วนที่มีอยู่แล้ว)
 window.startTNK = function() {
+  resetCEO();   // ← เปลี่ยนเป็น resetCEO แทน
   initFirestoreListeners();
+  initGlobalSettingsListener();
+  initDisplaySettingsListener();
   const saved = DB.get('tnk_saved_login', null);
   if (saved) {
     const users = getUsers();
@@ -1549,7 +2153,17 @@ window.startTNK = function() {
   }
   if (!currentUser) renderPublicEvents();
 };
-if (window.firebaseReady) window.startTNK();
+if (window.firebaseReady && window.db) {
+  window.startTNK();
+} else {
+  console.log("⏳ รอ Firebase พร้อม...");
+  const checkInterval = setInterval(() => {
+    if (window.firebaseReady && window.db) {
+      clearInterval(checkInterval);
+      window.startTNK();
+    }
+  }, 100);
+}
 
 // ====== RENDER ======
 // ใช้แสดงรูปขนาดย่อ (ประหยัด Bandwidth) แต่เก็บต้นฉบับไว้สำหรับดาวน์โหลด
@@ -1715,22 +2329,29 @@ function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 // ====== TAB SWITCH ======
 function switchTab(tab, btn) {
-  // ✅ ปิด Event View ทุกครั้งที่เปลี่ยนแท็บ
   document.getElementById('event-view').classList.remove('active');
-  // ✅ เปิด admin-section-3 กลับมา (กันกรณีที่ถูกปิดจาก Event View)
   document.getElementById('admin-section-3').classList.add('active');
   
-  ['home','dashboard','request','member','profile'].forEach(t => document.getElementById('tab-'+t).classList.add('hidden'));
-  document.getElementById('tab-'+tab).classList.remove('hidden');
+  const allTabs = ['home', 'dashboard', 'request', 'member', 'profile', 'settings', 'stats'];
+  allTabs.forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.classList.add('hidden');
+  });
+  
+  const selectedTab = document.getElementById('tab-' + tab);
+  if (selectedTab) selectedTab.classList.remove('hidden');
+  
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  
   if (tab === 'dashboard') renderDashboard();
   if (tab === 'member') renderMembers();
   if (tab === 'request') renderRequests();
   if (tab === 'home') renderAdminHomeEvents();
   if (tab === 'profile') renderProfile();
+  if (tab === 'settings') renderSettings();
+  if (tab === 'stats') renderStats();
   
-  // ✅ เก็บแท็บปัจจุบันใน localStorage
   localStorage.setItem('tnk_current_tab', tab);
 }
 
@@ -1794,8 +2415,33 @@ async function doCreateEvent() {
       showToast('⚠️ อัปโหลดรูปปกไม่สำเร็จ: ' + err.message);
       return;
     }
+  }
+
+  // 🔥 อ่านค่า Default Threshold ปัจจุบันจาก Firestore โดยตรง
+  let defaultThreshold = 0.45;
+  if (window.db) {
+    try {
+      const docRef = window.doc(window.db, "systemSettings", "faceSearchConfig");
+      const docSnap = await window.getDoc(docRef);
+      if (docSnap.exists()) {
+        const val = docSnap.data().defaultThreshold;
+        if (val !== undefined && val !== null && !isNaN(val)) {
+          defaultThreshold = val;
+          console.log(`📌 อ่านค่า default threshold จาก Firestore: ${defaultThreshold}`);
+        } else {
+          console.warn("⚠️ defaultThreshold ในเอกสารไม่ถูกต้อง ใช้ 0.45");
+        }
+      } else {
+        console.warn("⚠️ ไม่พบเอกสาร faceSearchConfig สร้างใหม่ด้วยค่า 0.45");
+        await window.setDoc(docRef, { defaultThreshold: 0.45 });
+        defaultThreshold = 0.45;
+      }
+    } catch (err) {
+      console.error('🔴 อ่านค่า default threshold ไม่สำเร็จ ใช้ 0.45', err);
+      showToast('⚠️ ไม่สามารถอ่านค่าเริ่มต้น ใช้ค่า 0.45');
+    }
   } else {
-    coverUrl = '';
+    console.warn("⚠️ window.db ไม่พร้อม ใช้ค่า default 0.45");
   }
 
   const eventId = 'ev_' + Date.now();
@@ -1803,22 +2449,27 @@ async function doCreateEvent() {
     id: eventId,
     name,
     date,
-    desc,
+    desc: desc || '',
     cover: coverUrl,
     photos: [],
     visible: true,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    faceSearchThreshold: defaultThreshold   // ✅ ค่าล่าสุดจาก Firestore
   };
 
   try {
     await saveEventToFirestore(newEvent);
     closeModal('createEventModal');
+    // เคลียร์ฟอร์ม
     document.getElementById('ce-name').value = '';
     document.getElementById('ce-date').value = '';
     document.getElementById('ce-desc').value = '';
     document.getElementById('ceCoverData').value = '';
     document.getElementById('ce-cover-preview').innerHTML = '<span style="font-size:32px">🖼️</span><div style="font-size:11px;color:var(--gold-dark)">เลือกรูปปก</div>';
-    showToast('✅ สร้าง Event แล้ว');
+    showToast(`✅ สร้าง Event แล้ว (ใช้ Threshold = ${defaultThreshold})`);
+    // รีเฟรช Dashboard และ Event Threshold list ทันที
+    renderDashboard();
+    if (document.getElementById('event-threshold-list')) renderEventThresholdList();
   } catch (err) {
     console.error('บันทึก Event ไม่สำเร็จ:', err);
     showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
@@ -1875,9 +2526,15 @@ function confirmDeleteEvent() {
 // เปิด Modal เลือก Threshold
 function openThresholdModal(eventId) {
   const ev = getEvents().find(x => x.id === eventId);
-  const currentThreshold = ev?.faceSearchThreshold ?? 0.45;
+  if (!ev) return;
+  // ถ้าอีเว้นยังไม่เคยตั้งค่า threshold ให้ใช้ค่า default จาก global settings
+let currentThreshold = (ev.faceSearchThreshold !== undefined && ev.faceSearchThreshold !== null) 
+  ? ev.faceSearchThreshold 
+  : currentGlobalSettings.defaultThreshold;
+  let thresholdValue = currentThreshold === -1 ? "-1" : currentThreshold.toFixed(2);
   document.getElementById('threshold-event-id').value = eventId;
-  document.getElementById('threshold-select').value = currentThreshold;
+  const selectEl = document.getElementById('threshold-select');
+  if (selectEl) selectEl.value = thresholdValue;
   openModal('thresholdModal');
 }
 
@@ -1889,18 +2546,19 @@ async function saveThreshold() {
   const idx = events.findIndex(e => e.id === eventId);
   if (idx < 0) return;
 
-  // อัปเดตใน appData
   events[idx].faceSearchThreshold = newThreshold;
-  
+
   try {
-    // อัปเดตเฉพาะฟิลด์นี้ใน Firestore (merge: true จะไม่เขียนทับฟิลด์อื่น)
     await window.setDoc(window.doc(window.db, "events", eventId), 
       { faceSearchThreshold: newThreshold }, 
       { merge: true }
     );
     showToast('✅ ปรับระดับการค้นหาใบหน้าเรียบร้อย');
     closeModal('thresholdModal');
-    renderDashboard(); // รีเฟรชหน้า Dashboard
+    
+    // รีเฟรช Dashboard และหน้า Settings
+    renderDashboard();
+    if (document.getElementById('event-threshold-list')) renderEventThresholdList();
   } catch (err) {
     showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
   }
@@ -1959,7 +2617,12 @@ async function handlePhotoUpload(input) {
       const imageUrl = await uploadToCloudinary(files[i]);
       if (evIndex !== -1) {
         events[evIndex].photos = events[evIndex].photos || [];
-        events[evIndex].photos.push({ id: 'ph_'+Date.now()+'_'+i, data: imageUrl, cloudinaryUrl: imageUrl });
+        events[evIndex].photos.push({
+  id: 'ph_' + Date.now() + '_' + i,
+  _index: i.toString(),
+  data: imageUrl,
+  cloudinaryUrl: imageUrl
+});
       }
       done++;
       prog.textContent = `⬆️ อัปโหลดแล้ว ${done}/${total} รูป...`;
@@ -2018,9 +2681,11 @@ function deleteCheckedPhotos() {
   document.querySelectorAll('.photo-tick.checked').forEach(el => toDelete.push(el.id.replace('tick-','')));
   if (!toDelete.length) { showToast('⚠️ เลือกรูปก่อน'); return; }
   events[idx].photos = events[idx].photos.filter(ph => !toDelete.includes(ph.id));
-  saveEventToFirestore(events[idx]);
+  saveEventToFirestore(events[idx]).then(() => {
+    // updateStorageUsage();   // ❌ ป้องกันพื้นที่ลด
+    showToast(`🗑️ ลบ ${toDelete.length} รูปแล้ว`);
+  });
   openPhotosModal(id);
-  showToast(`🗑️ ลบ ${toDelete.length} รูปแล้ว`);
 }
 // เปิด Modal แสดงรูปภาพใน Event (ใช้ getDisplayUrl เพื่อประหยัดแบนด์วิดท์)
 function openPhotosModal(id) {
@@ -2127,7 +2792,9 @@ function lightboxDelete() {
     const idx = events.findIndex(x => x.id === lightboxEventId);
     if (idx < 0) return;
     events[idx].photos = events[idx].photos.filter(ph => ph.id !== lightboxPhotoId);
-    saveEventToFirestore(events[idx]);
+    saveEventToFirestore(events[idx]).then(() => {
+      // updateStorageUsage();   // ❌ ป้องกันพื้นที่ลด
+    });
     closeLightbox();
     openPhotosModal(lightboxEventId);
     showToast('🗑️ ลบรูปแล้ว');
@@ -2136,7 +2803,9 @@ function lightboxDelete() {
     openReportModal(lightboxPhotoId, lightboxEventId, lightboxPhotos[lightboxIndex]);
   }
 }
-function lightboxDownload() { downloadPhoto(lightboxPhotos[lightboxIndex].data, 'photo_'+lightboxIndex+'.jpg'); }
+function lightboxDownload() { 
+  downloadPhoto(lightboxPhotos[lightboxIndex].data, 'photo_'+lightboxIndex+'.jpg', lightboxEventId); 
+}
 
 // ====== MEMBERS ======
 function renderMembers() { renderPending(); renderAllMembers(); updateMemberBadge(); }
@@ -2193,7 +2862,7 @@ function renderAllMembers() {
     return `
       <div class="all-member-item">
         <div class="all-member-top">
-          <div><div class="member-avatar">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div><div class="member-role-label">${isSelf&&u.isRoot?'👑 บัญชีหลัก':'👤 บัญชีทั่วไป'}</div></div>
+          <div><div class="member-avatar">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div><div class="member-role-label">${u.isRoot ? '👑 บัญชีหลัก' : '👤 บัญชีทั่วไป'}</div></div>
           <div class="member-details">
             <div class="member-info-line"><span class="member-info-label">🚩</span><span>${u.username}</span></div>
             <div class="member-info-line"><span class="member-info-label">🔤</span><span>${u.name}</span></div>
@@ -2232,6 +2901,423 @@ function openDeleteMember(uid) { const users = getUsers(); const u = users.find(
 function confirmDeleteMember() { const uid = document.getElementById('del-member-id').value; let users = getUsers(); users = users.filter(u=>u.id!==uid); setUsers(users); closeModal('deleteMemberModal'); renderMembers(); showToast('🗑️ ลบสมาชิกแล้ว'); }
 function openEditMember(uid) { const users = getUsers(); const u = users.find(x=>x.id===uid); if(!u) return; document.getElementById('em-id').value = uid; document.getElementById('em-user').value = u.username; document.getElementById('em-name').value = u.name; document.getElementById('em-pass').value = u.password; openModal('editMemberModal'); }
 function saveMemberEdit() { const uid = document.getElementById('em-id').value; const users = getUsers(); const idx = users.findIndex(u=>u.id===uid); if(idx<0) return; users[idx].username = document.getElementById('em-user').value.trim(); users[idx].name = document.getElementById('em-name').value.trim(); users[idx].password = document.getElementById('em-pass').value.trim(); setUsers(users); closeModal('editMemberModal'); renderMembers(); showToast('✅ บันทึกแล้ว'); }
+
+// ====== SETTINGS ======
+var settingsData = {
+  faceSearch: { defaultThreshold: 0.45, enabledForNewEvents: true },
+  display: { photosPerPage: 20 }
+};
+
+function switchSettingsTab(tabId, btn) {
+  document.querySelectorAll('.settings-tab').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderSettingsContent(tabId);
+}
+
+// ====== STORAGE USAGE (REAL‑TIME) ======
+// ====== STORAGE USAGE (REAL‑TIME) ======
+let currentStorageUsage = { usedMB: 0, usedGB: 0, totalGB: 25, percent: 0, totalPhotos: 0, avgSizeMB: 1.5 };
+
+function updateStorageUsage() {
+  const events = getEvents();
+  let totalPhotos = 0;
+  events.forEach(ev => {
+    totalPhotos += (ev.photos || []).length;
+  });
+  
+  const avgSizeMB = currentDisplaySettings.avgImageSizeMB;   // ← แก้ตรงนี้
+  
+  const usedMB = totalPhotos * avgSizeMB;
+  const totalGB = 25;
+  const totalMB = totalGB * 1024;
+  const percent = Math.min(100, (usedMB / totalMB) * 100);
+  currentStorageUsage = {
+    usedMB: usedMB.toFixed(1),
+    usedGB: (usedMB / 1024).toFixed(2),
+    totalGB: totalGB,
+    percent: percent.toFixed(1),
+    totalPhotos: totalPhotos,
+    avgSizeMB: avgSizeMB
+  };
+  
+  const storageContainer = document.getElementById('storage-usage-container');
+  if (storageContainer) {
+    storageContainer.innerHTML = renderStorageUsageHTML();
+  }
+}
+
+function renderStorageUsageHTML() {
+  const p = currentStorageUsage.percent;
+  let statusColor = '#38a169';
+  let statusText = '✅ พื้นที่เพียงพอ';
+  if (p >= 80) {
+    statusColor = '#e53e3e';
+    statusText = '⚠️ พื้นที่ใกล้เต็ม (ควรรีบล้างรูป)';
+  } else if (p >= 60) {
+    statusColor = '#ed8936';
+    statusText = '🟡 พื้นที่เริ่มจำกัด';
+  }
+  return `
+    <div>
+      <div style="text-align: center; font-weight: 500; margin-bottom: 8px;">พื้นที่จัดเก็บรูปภาพ (ประมาณการ)</div>
+      <div style="text-align: center; margin-bottom: 8px;">${currentStorageUsage.usedMB} MB / ${currentStorageUsage.totalGB} GB (${currentStorageUsage.percent}%)</div>
+      <div style="background: #e2e8f0; border-radius: 12px; height: 10px; overflow: hidden; margin-bottom: 12px;">
+        <div style="width: ${p}%; background: ${statusColor}; height: 100%; border-radius: 12px;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <span>📷 รูปภาพทั้งหมด: ${currentStorageUsage.totalPhotos} รูป</span>
+        <span>📏 ขนาดเฉลี่ย: ${currentStorageUsage.avgSizeMB} MB/รูป</span>
+        <span style="color: ${statusColor};">${statusText}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderSettingsContent(tabId) {
+  var container = document.getElementById('settings-content');
+  if (!container) return;
+
+  // ✅ ซ่อนกรอบใหญ่ของ Event Threshold ทุกครั้งที่เปลี่ยนแท็บ (จะเปิดเฉพาะ facesearch)
+  var thresholdWrapper = document.getElementById('event-threshold-wrapper');
+  if (thresholdWrapper) {
+    thresholdWrapper.style.display = 'none';
+  }
+
+  var html = '';
+
+  switch (tabId) {
+    case 'facesearch':
+      // ค่า default ปัจจุบัน (ป้องกัน undefined)
+      var currentDefault = (currentGlobalSettings.defaultThreshold !== undefined)
+        ? currentGlobalSettings.defaultThreshold
+        : 0.45;
+
+      html = `
+        <div class="settings-card">
+          <div class="settings-card-title">ค่าเริ่มต้นสำหรับ Event ใหม่</div>
+          <div class="profile-field">
+            <label>ระดับการค้นหาใบหน้า (Threshold)</label>
+            <select id="settings-default-threshold" class="form-input">
+              <option value="0.35">0.35 - เข้มงวดมาก</option>
+              <option value="0.40">0.40 - เข้มงวด</option>
+              <option value="0.45">0.45 - สมดุล (แนะนำ)</option>
+              <option value="0.50">0.50</option>
+              <option value="0.55">0.55</option>
+              <option value="0.60">0.60 - ยืดหยุ่น</option>
+              <option value="-1">🚫 ไม่อนุญาตให้ค้นหาใบหน้า</option>
+            </select>
+            <div style="margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--gold-dark);">
+              🔍 ค่าเริ่มต้นปัจจุบัน: 
+              <span id="current-default-threshold-value">
+                ${currentDefault === -1 ? '🚫 ไม่อนุญาตให้ค้นหาใบหน้า' : currentDefault}
+              </span>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="saveSettings()" style="margin-top: 16px;">💾 Save Settings</button>
+        </div>
+      `;
+      container.innerHTML = html;
+
+      // ตั้งค่า dropdown ตาม currentDefault
+      var selectEl = document.getElementById('settings-default-threshold');
+      if (selectEl) {
+        selectEl.value = currentDefault;
+      }
+
+      // ✅ แสดงกรอบใหญ่ด้านล่างสำหรับปรับ Threshold ราย Event
+      if (thresholdWrapper) {
+        thresholdWrapper.style.display = 'block';
+        setTimeout(function() {
+          renderEventThresholdList();
+        }, 0);
+      }
+      break;
+
+    case 'display':
+      html = `
+        <div class="settings-card">
+          <div class="settings-card-title">🖼️ จำนวนรูปภาพใน Event</div>
+          <div class="profile-field">
+            <label>จำนวนรูปต่อหน้า (Photos Per Page)</label>
+            <input class="form-input" id="settings-photos-per-page" type="number" value="${currentDisplaySettings.photosPerPage}" min="1" max="100">
+          </div>
+          <button class="btn-primary" onclick="saveDisplaySettings()" style="margin-top: 8px;">💾 บันทึก</button>
+        </div>
+        <div class="settings-card" style="margin-top: 20px;">
+          <div class="settings-card-title">📏 ขนาดไฟล์รูปภาพ</div>
+          <div class="profile-field">
+            <label>ขนาดไฟล์เฉลี่ย (MB)</label>
+            <input class="form-input" id="settings-avg-image-size" type="number" step="0.1" min="0.5" max="10" value="${currentDisplaySettings.avgImageSizeMB}" placeholder="เช่น 1.5">
+            <div style="font-size: 11px; color: var(--gray); margin-top: 4px;">💡 ค่าแนะนำ: รูปทั่วไป 1-2 MB, รูปคุณภาพสูง 3-5 MB</div>
+          </div>
+          <button class="btn-primary" onclick="saveDisplaySettings()" style="margin-top: 8px;">💾 บันทึก</button>
+        </div>
+      `;
+      container.innerHTML = html;
+      break;
+
+    case 'integrations':
+  // ฟังก์ชันช่วย mask API Key
+  function maskApiKey(key) {
+    if (!key || key.length < 12) return '••••••••';
+    return key.slice(0, 6) + '••••••••' + key.slice(-4);
+  }
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBWntP6GH2pCDwc2pVyUhF4cm7QwUumh0w",
+    authDomain: "tnk-events-d1983.firebaseapp.com",
+    projectId: "tnk-events-d1983",
+    storageBucket: "tnk-events-d1983.firebasestorage.app",
+    messagingSenderId: "690992959407",
+    appId: "1:690992959407:web:1e52c321c67ddf5289695a"
+  };
+
+  // ✅ ใช้ตัวแปร html ของฟังก์ชันหลัก (ที่ประกาศ var html = ''; ด้านบน)
+  html = `
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+      
+      <!-- 💾 พื้นที่จัดเก็บโดยประมาณ -->
+      <div class="settings-card" id="storage-usage-card" style="padding: 18px; background: linear-gradient(135deg, #fff 0%, #FBF3DC 100%);">
+        <div class="settings-card-title" style="font-size: 18px; margin-bottom: 12px;">💾 พื้นที่จัดเก็บโดยประมาณ</div>
+        <div id="storage-usage-container">${renderStorageUsageHTML()}</div>
+        <div style="font-size: 11px; color: var(--gray); margin-top: 10px; border-top: 1px solid var(--gold-light); padding-top: 8px;">
+          📌 คำนวณพื้นที่เฉลี่ย (ค่าเริ่มต้น 1.5 MB/รูป)<br>
+          🔍 ตรวจสอบพื้นที่จริงได้ที่ <strong>Cloudinary Dashboard</strong>
+        </div>
+      </div>
+
+      <!-- Firebase Card (ย่อ) -->
+  <!-- Firebase Card (ย่อ) -->
+<div class="settings-info-card">
+    <div class="settings-card-title" style="font-size: 18px; margin-bottom: 16px;">🔥 Firebase Configuration</div>
+    <div style="display: grid; grid-template-columns: auto 1fr; gap: 12px 20px; font-size: 13px; align-items: baseline;">
+      <div style="font-weight: 600; color: var(--gold-dark); white-space: nowrap;">Project ID         :</div>
+      <div style="font-family: monospace; word-break: break-word;">${firebaseConfig.projectId}</div>
+    </div>
+    <div style="margin-top: 16px; padding: 8px 12px; background: var(--gold-light); border-radius: 10px; text-align: center; font-size: 12px;">
+  <div>✅ Firestore Status: <strong style="color: var(--green);">Connected</strong></div>
+  <div style="font-size: 11px; color: var(--gray); margin-top: 4px;">(Real-time sync)</div>
+</div>
+  </div>
+
+      <!-- Cloudinary Config Card (หัวข้อใหญ่ขึ้นเล็กน้อย) -->
+<div class="settings-info-card">
+  <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; row-gap: 6px;">
+    <div class="settings-card-title" style="font-size: 17px; margin: 0; white-space: nowrap;">☁️ Cloudinary Configuration</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      <div style="font-size: 12px;"><span style="font-weight: 600; color: var(--gold-dark);">Cloud Name :</span> <span style="font-family: monospace;">${CLOUDINARY_CLOUD_NAME}</span></div>
+      <div style="font-size: 12px;"><span style="font-weight: 600; color: var(--gold-dark);">Upload Preset :</span> <span style="font-family: monospace;">${CLOUDINARY_UPLOAD_PRESET}</span></div>
+    </div>
+  </div>
+  <div style="margin-top: 10px; padding: 5px 8px; background: var(--gold-light); border-radius: 8px; text-align: center; font-size: 11px;">
+    📸 Image upload via Cloudinary API
+  </div>
+</div>
+
+      <!-- System Information Card -->
+      <div class="settings-info-card">
+        <div class="settings-card-title" style="font-size: 18px; margin-bottom: 16px;">📦 System Information</div>
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 12px 20px; font-size: 13px; align-items: baseline;">
+          <div style="font-weight: 600; color: var(--gold-dark); white-space: nowrap;">Face API Models :</div>
+          <div>${faceApiModelsLoaded ? '✅ Loaded' : '⏳ Loading...' }</div>
+          <div style="font-weight: 600; color: var(--gold-dark); white-space: nowrap;">Global Settings Sync :</div>
+          <div>${window.db ? '✅ Firestore' : '⚠️ Local only'}</div>
+          <div style="font-weight: 600; color: var(--gold-dark); white-space: nowrap;">User Storage :</div>
+          <div>localStorage </div>
+        </div>
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
+
+  // อัปเดตพื้นที่เก็บข้อมูลและ Cloudinary
+  updateStorageUsage();
+  try {
+    updateCloudinaryStorageUI();
+  } catch(e) {
+    console.warn("ไม่สามารถอัปเดตพื้นที่ Cloudinary", e);
+  }
+  break;
+
+    case 'statistics':
+  container.innerHTML = `
+    <div class="settings-card" style="max-width:100%; margin-top: -8px; margin-bottom: 0;">
+      <div class="settings-card-title">⚙️ รายละเอียด Event</div>
+      <div class="admin-events-list" id="stats-events-grid"></div>
+    </div>
+  `;
+  renderStatsEvents();
+  break;
+  }
+}
+
+// ====== CLOUDINARY REAL STORAGE USAGE ======
+async function fetchCloudinaryStorage() {
+  if (!window.cloudinaryApiKey || !window.cloudinaryApiSecret) {
+    return { error: 'missing_keys' };
+  }
+  const credentials = btoa(`${window.cloudinaryApiKey}:${window.cloudinaryApiSecret}`);
+  try {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/usage`, {
+      headers: { 'Authorization': `Basic ${credentials}` }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error('Cloudinary API error:', err);
+    return { error: err.message };
+  }
+}
+
+async function updateCloudinaryStorageUI() {
+  const container = document.getElementById('real-cloudinary-storage');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center; padding:20px;">⏳ กำลังดึงข้อมูลจาก Cloudinary...</div>';
+  const data = await fetchCloudinaryStorage();
+  if (data.error === 'missing_keys') {
+    container.innerHTML = `<div style="color: var(--gray); text-align:center; padding:12px;">⚠️ กรุณากรอก Cloudinary API Key และ API Secret ด้านล่าง</div>`;
+    return;
+  }
+  if (data.error) {
+    container.innerHTML = `<div style="color: red; text-align:center;">❌ ดึงข้อมูลไม่สำเร็จ: ${data.error}</div>`;
+    return;
+  }
+  const usageBytes = data.storage?.usage || 0;
+  const usageGB = (usageBytes / (1024 ** 3)).toFixed(2);
+  const totalGB = 25;
+  const percent = (usageBytes / (totalGB * 1024 ** 3)) * 100;
+  const remainingGB = (totalGB - usageGB).toFixed(2);
+  let statusColor = '#38a169', statusText = '✅ พื้นที่เพียงพอ';
+  if (percent >= 90) { statusColor = '#e53e3e'; statusText = '🔥 พื้นที่ใกล้เต็มมาก (ควรรีบล้าง/สำรองข้อมูล)'; }
+  else if (percent >= 80) { statusColor = '#e53e3e'; statusText = '⚠️ พื้นที่ใกล้เต็ม (ควรลบรูปหรือเพิ่มแผน)'; }
+  else if (percent >= 60) { statusColor = '#ed8936'; statusText = '🟡 พื้นที่เริ่มจำกัด'; }
+  container.innerHTML = `
+    <div style="margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-weight: 600;">📊 พื้นที่จัดเก็บจริง (Cloudinary)</span>
+        <span>${usageGB} GB / ${totalGB} GB (${percent.toFixed(1)}%)</span>
+      </div>
+      <div style="background: #e2e8f0; border-radius: 12px; height: 12px; overflow: hidden;">
+        <div style="width: ${Math.min(100, percent)}%; background: ${statusColor}; height: 100%; border-radius: 12px; transition: width 0.3s;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px;">
+        <span>📦 พื้นที่ว่าง: ${remainingGB} GB</span>
+        <span style="color: ${statusColor};">${statusText}</span>
+      </div>
+      <div style="font-size: 11px; color: var(--gray); margin-top: 6px;">
+        🔐 ข้อมูลดึงจาก Cloudinary API (แผนฟรี 25 GB)
+      </div>
+    </div>
+    <div style="margin-top: 8px;">
+      <button onclick="updateCloudinaryStorageUI()" style="background: var(--gold); border: none; padding: 6px 12px; border-radius: 8px; color: white; cursor: pointer;">🔄 รีเฟรชข้อมูล</button>
+    </div>
+  `;
+}
+
+function saveCloudinaryCredentials() {
+  const key = document.getElementById('cloudinary-api-key').value.trim();
+  const secret = document.getElementById('cloudinary-api-secret').value.trim();
+  if (!key || !secret) {
+    showToast('⚠️ กรุณากรอกทั้ง API Key และ API Secret');
+    return;
+  }
+  window.cloudinaryApiKey = key;
+  window.cloudinaryApiSecret = secret;
+  localStorage.setItem('cloudinary_api_key', key);
+  localStorage.setItem('cloudinary_api_secret', secret);
+  showToast('✅ บันทึก API Key/Secret เรียบร้อย');
+  updateCloudinaryStorageUI();
+}
+
+function renderSettings() {
+  var defaultThreshold = currentGlobalSettings.defaultThreshold !== undefined ? currentGlobalSettings.defaultThreshold : 0.45;
+  settingsData.faceSearch = { defaultThreshold: defaultThreshold };
+  
+  var local = JSON.parse(localStorage.getItem('tnk_settings') || '{}');
+  if (local.display) {
+    settingsData.display = local.display;
+  } else {
+    settingsData.display = { photosPerPage: 20 };
+  }
+  
+  var activeTab = document.querySelector('.settings-tab.active');
+  if (activeTab) {
+    var onclickAttr = activeTab.getAttribute('onclick');
+    var match = onclickAttr ? onclickAttr.match(/'([^']+)'/) : null;
+    var tabId = match ? match[1] : 'facesearch';
+    switchSettingsTab(tabId, activeTab);
+  } else {
+    switchSettingsTab('facesearch', document.querySelector('.settings-tab'));
+  }
+}
+
+// ฟังก์ชันใหม่ (แทนที่)
+async function saveSettings() {
+  const thresholdEl = document.getElementById('settings-default-threshold');
+  if (!thresholdEl) return;
+
+  let rawVal = thresholdEl.value;
+  let newThreshold = rawVal === '-1' ? -1 : parseFloat(rawVal);
+
+  if (!window.db) {
+    showToast('⚠️ Firebase ยังไม่พร้อม');
+    console.error('❌ saveSettings: window.db ไม่มี');
+    return;
+  }
+
+  try {
+    console.log('🟢 กำลังบันทึก defaultThreshold =', newThreshold);
+    await window.setDoc(window.doc(window.db, "systemSettings", "faceSearchConfig"), {
+      defaultThreshold: newThreshold
+    }, { merge: true });
+    console.log('🟢 บันทึกสำเร็จ');
+    showToast('✅ บันทึกค่าเริ่มต้นสำหรับ Event ใหม่เรียบร้อย');
+    
+    // รีเฟรช UI ในหน้า Settings (ถ้ามี)
+    if (document.getElementById('event-threshold-list')) {
+      renderEventThresholdList();
+    }
+  } catch (err) {
+    console.error('🔴 บันทึกไม่สำเร็จ:', err);
+    showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
+  }
+}
+
+// ====== STATS ======
+function renderStats() {
+  var events = getEvents();
+  var requests = getRequests();
+  var users = getUsers();
+  var pending = getPending();
+  var totalPhotos = 0;
+  events.forEach(function(e) { totalPhotos += (e.photos || []).length; });
+  var container = document.getElementById('stats-content');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number">${events.length}</div>
+        <div class="stat-label">🗓️ Events</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${totalPhotos}</div>
+        <div class="stat-label">🖼️ Photos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${users.length}</div>
+        <div class="stat-label">👥 Members</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${pending.length}</div>
+        <div class="stat-label">⏳ Pending</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${requests.length}</div>
+        <div class="stat-label">📬 Requests</div>
+      </div>
+    </div>`;
+}
 
 // ====== PROFILE ======
 function renderProfile() {
@@ -2359,82 +3445,6 @@ function updatePassword() {
   showToast('✅ เปลี่ยนรหัสผ่านเรียบร้อย');
 }
 
-// ฟังก์ชันเปลี่ยนรหัสผ่าน
-function updatePassword() {
-  if (!currentUser) return;
-
-  var oldP = document.getElementById('profile-old-pass').value.trim();
-  var newP = document.getElementById('profile-new-pass').value.trim();
-  var confirmP = document.getElementById('profile-confirm-pass').value.trim();
-
-  if (!oldP || !newP || !confirmP) {
-    showToast('⚠️ กรุณากรอกให้ครบทั้ง 3 ช่อง');
-    return;
-  }
-
-  var users = getUsers();
-  var idx = users.findIndex(u => u.id === currentUser.id);
-  if (idx < 0) return;
-
-  if (users[idx].password !== oldP) {
-    showToast('❌ รหัสผ่านปัจจุบันไม่ถูกต้อง');
-    return;
-  }
-
-  if (newP !== confirmP) {
-    showToast('❌ รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน');
-    return;
-  }
-
-  users[idx].password = newPass;
-  setUsers(users);
-  currentUser = users[idx];
-
-  document.getElementById('profile-old-pass').value = '';
-  document.getElementById('profile-new-pass').value = '';
-  document.getElementById('profile-confirm-pass').value = '';
-
-  showToast('✅ เปลี่ยนรหัสผ่านเรียบร้อย');
-}
-
-// ฟังก์ชันเปลี่ยนรหัสผ่าน
-function updatePassword() {
-  if (!currentUser) return;
-
-  var oldP = document.getElementById('profile-old-pass').value.trim();
-  var newP = document.getElementById('profile-new-pass').value.trim();
-  var confirmP = document.getElementById('profile-confirm-pass').value.trim();
-
-  if (!oldP || !newP || !confirmP) {
-    showToast('⚠️ กรุณากรอกให้ครบทั้ง 3 ช่อง');
-    return;
-  }
-
-  var users = getUsers();
-  var idx = users.findIndex(u => u.id === currentUser.id);
-  if (idx < 0) return;
-
-  if (users[idx].password !== oldP) {
-    showToast('❌ รหัสผ่านปัจจุบันไม่ถูกต้อง');
-    return;
-  }
-
-  if (newP !== confirmP) {
-    showToast('❌ รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน');
-    return;
-  }
-
-  users[idx].password = newP;
-  setUsers(users);
-  currentUser = users[idx];
-
-  document.getElementById('profile-old-pass').value = '';
-  document.getElementById('profile-new-pass').value = '';
-  document.getElementById('profile-confirm-pass').value = '';
-
-  showToast('✅ เปลี่ยนรหัสผ่านเรียบร้อย');
-}
-
 function getEventPhotos(id) { const ev = getEvents().find(x => x.id === id); return ev ? (ev.photos || []) : []; }
 function closeEventView() {
   document.getElementById('event-view').classList.remove('active');
@@ -2447,7 +3457,7 @@ function renderEventPhotos(page) {
   const ev = getEvents().find(x => x.id === currentEventView);
   if (!ev) return;
   const photos = ev.photos || [];
-  const perPage = 20;
+  const perPage = currentDisplaySettings.photosPerPage;
   const totalPages = Math.ceil(photos.length / perPage);
   if (page < 1) page = 1;
   if (page > totalPages) page = totalPages;
@@ -2461,13 +3471,14 @@ function renderEventPhotos(page) {
   if (!pagePhotos.length) {
     grid.innerHTML = '<div class="no-items">ไม่มีรูปภาพในหน้านี้</div>';
   } else {
+    // ✅ แก้ไขตรงนี้: เพิ่ม ,'${currentEventView}' ใน onclick ของปุ่มดาวน์โหลด
     grid.innerHTML = pagePhotos.map((ph, i) => `
       <div class="pub-photo-wrap">
         <div class="pub-photo" onclick="openLightboxPublic(getEventPhotos('${currentEventView}'),${start + i},'${currentEventView}')">
           <img src="${getDisplayUrl(ph.data)}" alt="">
         </div>
         <div class="pub-tick" id="pub-tick-${ph.id}" onclick="togglePubTick('${ph.id}')"></div>
-        <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${start + i + 1}.jpg')">⬇️</button>
+        <button class="pub-dl-btn" onclick="downloadPhoto('${ph.data}','photo_${start + i + 1}.jpg','${currentEventView}')">⬇️</button>
       </div>
     `).join('');
   }
@@ -2512,6 +3523,7 @@ function openEventView(id, mode) {
   const ev = getEvents().find(x => x.id === id);
   if (!ev) return;
   currentEventView = id;
+  incrementEventViews(id);
 
   // รูปปก
   document.getElementById('ev-cover').innerHTML = ev.cover
@@ -2533,12 +3545,15 @@ renderEventPhotos(1);
 var faceSearchBox = document.querySelector('.search-face-box');
 var faceResults = document.getElementById('face-search-results');
 
-if (ev.faceSearchThreshold === -1) {
-  // ถ้าปิดการค้นหา → ซ่อนกล่องค้นหาและผลลัพธ์
+// ✅ แปลงเป็นตัวเลขให้แน่ใจ (รองรับกรณี string หรือ undefined)
+var threshold = Number(ev.faceSearchThreshold);
+
+if (threshold === -1 || isNaN(threshold)) {
+  // ถ้าไม่อนุญาต หรือไม่มีค่า → ซ่อนกล่องค้นหาและผลลัพธ์
   if (faceSearchBox) faceSearchBox.style.display = 'none';
   if (faceResults) faceResults.style.display = 'none';
 } else {
-  // ถ้าเปิดการค้นหา → แสดงกล่องค้นหา (และซ่อนผลลัพธ์เก่า)
+  // ถ้ามีค่า threshold ที่ไม่ใช่ -1 → แสดงกล่องค้นหา
   if (faceSearchBox) faceSearchBox.style.display = '';
   if (faceResults) faceResults.style.display = 'none';
 }
@@ -2566,10 +3581,18 @@ function downloadSelectedPublic() {
 
 // ====== REPORT ======
 function openReportModal(photoId, eventId, photo) {
-  document.getElementById('report-photo-id').value = photoId;
+  // ถ้า photo มี id ใช้ id, ถ้าไม่มี ใช้ index เป็น fallback
+  const pid = (photo && photo.id) ? photo.id : photoId;
+  document.getElementById('report-photo-id').value = pid;
   document.getElementById('report-event-id').value = eventId;
+  
   const prev = document.getElementById('report-photo-preview');
-  prev.innerHTML = (photo && photo.data) ? `<img src="${photo.data}" alt="">` : '<span style="font-size:48px">🖼️</span>';
+  if (photo && (photo.data || photo.url || photo.cloudinaryUrl)) {
+    const url = photo.data || photo.url || photo.cloudinaryUrl;
+    prev.innerHTML = `<img src="${url}" alt="">`;
+  } else {
+    prev.innerHTML = '<span style="font-size:48px">🖼️</span>';
+  }
   document.getElementById('report-reason').value = '';
   openModal('reportModal');
 }
@@ -2577,54 +3600,120 @@ function submitReport() {
   const pid = document.getElementById('report-photo-id').value;
   const eid = document.getElementById('report-event-id').value;
   const reason = document.getElementById('report-reason').value.trim();
-  if (!reason) { showToast('⚠️ ระบุเหตุผล'); return; }
+
+  if (!reason) { showToast('⚠️ กรุณาระบุเหตุผล'); return; }
+
   const ev = getEvents().find(x => x.id === eid);
+  if (!ev) { showToast('⚠️ ไม่พบ Event'); return; }
+
+  // ค้นหารูปด้วยหลากหลายวิธี
+  let photoObj = null;
+  const photos = ev.photos || [];
+
+  for (let i = 0; i < photos.length; i++) {
+    const p = photos[i];
+    // เช็คหลายรูปแบบ: id ตรงกัน, index ตรงกัน, หรือ data/url ตรงกัน
+    if (p.id === pid || p._index === pid || i.toString() === pid) {
+      photoObj = p;
+      // ถ้ารูปเก่าไม่มี id ให้สร้าง id ให้
+      if (!p.id) {
+        p.id = 'ph_' + Date.now() + '_' + i;
+        p._index = i.toString();
+        saveEventToFirestore(ev).catch(() => {});
+      }
+      break;
+    }
+  }
+
+  if (!photoObj) {
+    console.error('❌ ไม่พบรูปที่มี id:', pid, 'ใน', photos);
+    showToast('⚠️ ไม่พบรูปภาพที่ต้องการแจ้งลบ');
+    return;
+  }
+
+  const photoUrl = photoObj.data || photoObj.url || photoObj.cloudinaryUrl || '';
+
   const request = {
-    id: 'req_'+Date.now(), photoId: pid, eventId: eid, eventName: ev ? ev.name : '-',
-    photoData: ev ? (ev.photos.find(p => p.id === pid) || {}).data : null, reason, date: new Date().toLocaleDateString('th-TH')
+    id: 'req_' + Date.now(),
+    photoId: photoObj.id || pid,
+    eventId: eid,
+    eventName: ev.name || '-',
+    photoData: photoUrl,
+    reason: reason,
+    date: new Date().toLocaleDateString('th-TH')
   };
+
   saveRequestToFirestore(request);
   closeModal('reportModal');
-  showToast('📨 ส่งรายงานแล้ว');
+  showToast('📨 ส่งรายงานเรียบร้อย');
 }
 function renderRequests() {
   const requests = getRequests();
   const container = document.getElementById('request-list');
-  if (!requests.length) { container.innerHTML = '<div class="no-items">📭 ไม่มีคำร้อง</div>'; return; }
-  container.innerHTML = requests.map(r => `
-    <div class="request-item" id="req-${r.id}">
-      <div class="request-img">${r.photoData ? `<img src="${r.photoData}" alt="">` : '🖼️'}</div>
-      <div style="flex:1;display:flex;flex-direction:column">
-        <div class="request-details">
-          <p>📁 Event: <strong>${r.eventName}</strong></p>
-          <p>🗓️ วันที่แจ้ง: ${r.date}</p>
-          <p>📝 เหตุผล: ${r.reason}</p>
+  if (!container) return;
+  if (!requests.length) {
+    container.innerHTML = '<div class="no-items">📭 ไม่มีคำร้อง</div>';
+    return;
+  }
+  container.innerHTML = requests.map(r => {
+    const photoUrl = r.photoData || '';
+    const imgTag = photoUrl
+      ? `<img src="${photoUrl}" alt="รูปที่แจ้งลบ" style="width:100%;height:100%;object-fit:cover;">`
+      : '<span style="font-size:28px;">🖼️</span>';
+    return `
+      <div class="request-item" id="req-${r.id}">
+        <div class="request-img" onclick="viewReportPhoto('${photoUrl}')">
+          ${imgTag}
         </div>
-        <div class="request-actions">
-          <button class="btn-del-report" onclick="deleteReport('${r.id}')">✅ ลบรายงาน</button>
-          <button class="btn-del-photo" onclick="openDelReportPhoto('${r.id}')">🗑️ ลบรูปภาพ</button>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div class="request-details">
+            <p>📁 Event : <strong>${r.eventName}</strong></p>
+            <p>🗓️ วันที่แจ้ง : ${r.date}</p>
+            <p>📝 เหตุผล : ${r.reason}</p>
+          </div>
+          <div class="request-actions">
+            <button class="btn-del-report" onclick="deleteReport('${r.id}')">✅ ลบรายงาน</button>
+            <button class="btn-del-photo" onclick="openDelReportPhoto('${r.id}')">🗑️ ลบรูปภาพ</button>
+          </div>
         </div>
-      </div>
-    </div>`).join('');
+      </div>`;
+  }).join('');
+}
+
+function viewReportPhoto(url) {
+  if (!url) return;
+  lightboxPhotos = [{ id: 'report', data: url }];
+  lightboxIndex = 0;
+  lightboxMode = 'report';
+  lightboxEventId = null;
+  document.getElementById('lb-del-btn').textContent = '🔙 ปิด';
+  showLightbox();
 }
 function deleteReport(rid) {
   if (!window.db) return;
   window.deleteDoc(window.doc(window.db, "requests", rid)).then(() => showToast('✅ ลบรายงานแล้ว'));
 }
 function openDelReportPhoto(rid) { document.getElementById('del-report-id').value = rid; openModal('delReportPhotoModal'); }
-function confirmDelReportPhoto() {
+async function confirmDelReportPhoto() {
   const rid = document.getElementById('del-report-id').value;
   const req = getRequests().find(r => r.id === rid);
   if (!req) return;
   const events = getEvents();
-  const idx = events.findIndex(e => e.id === req.eventId);
-  if (idx >= 0) {
-    events[idx].photos = events[idx].photos.filter(ph => ph.id !== req.photoId);
-    saveEventToFirestore(events[idx]);
+  const evIdx = events.findIndex(e => e.id === req.eventId);
+  if (evIdx !== -1) {
+    events[evIdx].photos = events[evIdx].photos.filter(ph => ph.id !== req.photoId);
+    await saveEventToFirestore(events[evIdx]);
+    // updateStorageUsage();   // ❌ ป้องกันพื้นที่ลด
   }
-  window.deleteDoc(window.doc(window.db, "requests", rid));
+  if (window.db) {
+    try {
+      await window.deleteDoc(window.doc(window.db, "requests", rid));
+      showToast('🗑️ ลบรูปภาพและคำร้องเรียบร้อย');
+    } catch (err) {
+      showToast('⚠️ ลบคำร้องไม่สำเร็จ: ' + err.message);
+    }
+  }
   closeModal('delReportPhotoModal');
-  showToast('🗑️ ลบรูปภาพเรียบร้อย');
 }
 function updateRequestBadge() {
   const cnt = getRequests().length;
@@ -2644,82 +3733,57 @@ function handleCoverInput(input, previewId, dataId) {
   reader.readAsDataURL(input.files[0]);
 }
 
-// ====== FACE SEARCH ======
-// ฟังก์ชันค้นหาใบหน้า
-async function performFaceSearch(input) {
-  if (!input.files[0]) return;
-  showToast('🔍 กำลังค้นหาใบหน้า...');
-
-  try {
-    const probeImg = await faceapi.bufferToImage(input.files[0]);
-    const probeOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
-    const probeDet = await faceapi.detectSingleFace(probeImg, probeOptions)
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-    if (!probeDet) { showToast('⚠️ ไม่พบใบหน้าในรูป'); return; }
-    const probeDesc = probeDet.descriptor;
-
-    const snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
-    
-    const ev = getEvents().find(x => x.id === currentEventView);
-    if (!ev) return;
-    const threshold = ev.faceSearchThreshold ?? 0.45; // ✅ ใช้ค่าจาก Event
-    if (threshold === -1) {
-      showToast('🚫 Event นี้ปิดการค้นหาใบหน้า');
-      return;
-    }
-
-    const matchedPhotoIds = [];
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.eventId !== currentEventView) return;
-      // รองรับข้อมูลที่เก็บเป็น Object (รูปแบบใหม่) และ Array (รูปแบบเก่า)
-      let encodings = [];
-      if (data.encodings) {
-        if (Array.isArray(data.encodings)) {
-          encodings = data.encodings;
-        } else {
-          encodings = Object.values(data.encodings);
-        }
-      } else if (data.encoding) {
-        encodings = [data.encoding];
-      }
-      
-      for (const enc of encodings) {
-        if (faceapi.euclideanDistance(probeDesc, enc) < threshold) {
-          matchedPhotoIds.push(data.photoId);
-          break;
-        }
-      }
-    });
-
-    // ส่วนของการแสดงผล
-    const matchedPhotos = ev.photos.filter(p => matchedPhotoIds.includes(p.id));
-    const grid = document.getElementById('face-results-grid');
-    const resultsContainer = document.getElementById('face-search-results');
-
-    if (matchedPhotos.length === 0) {
-      grid.innerHTML = '<div class="no-items">🔍 ไม่พบรูปที่ตรงกัน</div>';
-    } else {
-      // เก็บผลลัพธ์ไว้ใน window เพื่อให้ Lightbox เข้าถึงได้
-window.currentMatchedPhotos = matchedPhotos;
-
-grid.innerHTML = matchedPhotos.map(function(ph, i) {
-  return '<div class="pub-photo-wrap">' +
-    '<div class="pub-photo" onclick="openLightboxPublic(window.currentMatchedPhotos, ' + i + ', \'' + currentEventView + '\')">' +
-    '<img src="' + ph.data + '" alt=""></div>' +
-    '<button class="pub-dl-btn" onclick="downloadPhoto(\'' + ph.data + '\',\'photo.jpg\')">⬇️</button>' +
-    '</div>';
-}).join('');
-    }
-    resultsContainer.style.display = 'block';
-    showToast(`✅ พบ ${matchedPhotos.length} รูปที่ตรงกัน`);
-
-  } catch (e) {
-    console.error(e);
-    showToast('⚠️ ค้นหาไม่สำเร็จ: ' + e.message);
+function renderEventThresholdList() {
+  const container = document.getElementById('event-threshold-list');
+  if (!container) return;
+  const events = getEvents();
+  if (events.length === 0) {
+    container.innerHTML = '<div class="no-items">📭 ยังไม่มี Event</div>';
+    return;
   }
+  // เรียงจากใหม่ไปเก่า
+  const sortedEvents = [...events].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateB - dateA;
+  });
+  container.innerHTML = sortedEvents.map(event => `
+    <div class="threshold-event-card">
+      <div class="threshold-event-cover">
+        ${event.cover ? `<img src="${getDisplayUrl(event.cover)}" alt="">` : '<span>🖼️</span>'}
+      </div>
+      <div class="threshold-event-info">
+        <div class="threshold-event-name">${escapeHtml(event.name)}</div>
+        <div class="threshold-event-date">
+          🗓️ ${formatDate(event.date)}
+        </div>
+      </div>
+      <button class="threshold-event-btn" onclick="event.stopPropagation(); openThresholdModal('${event.id}')">🎚️ ปรับระดับ</button>
+    </div>
+  `).join('');
+}
+
+// helper ป้องกัน XSS
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
+
+// ฟังก์ชันนำทางไปยัง Event ใน Dashboard
+function goToEventDashboard(eventId) {
+  // เปลี่ยนไปแท็บ Dashboard
+  const dashboardBtn = document.querySelector('.nav-btn[onclick*="dashboard"]');
+  if (dashboardBtn) dashboardBtn.click();
+  // เลื่อนไปที่การ์ดของ Event นั้น
+  setTimeout(() => {
+    const el = document.getElementById('ev-card-' + eventId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 300);
 }
 
 // ฟังก์ชันปิดผลลัพธ์การค้นหาใบหน้า
@@ -2745,10 +3809,15 @@ function closeFaceSearch() {
 }
 
 // ====== DOWNLOAD ======
-function downloadPhoto(dataUrl, filename) {
+function downloadPhoto(dataUrl, filename, eventId) {
+  if (eventId) incrementEventDownloads(eventId);  // เพิ่มสถิติ downloads
   fetch(dataUrl).then(res => res.blob()).then(blob => {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }).catch(() => window.open(dataUrl, '_blank'));
 }
 
@@ -2783,6 +3852,139 @@ function formatDate(d) {
     }
   }, 30000);
 })();
+// ========== STATS EVENTS (2 คอลัมน์ เหมือน Modal Event List) ==========
+function renderStatsEvents() {
+  const container = document.getElementById('stats-events-grid');
+  if (!container) return;
+  container.className = 'event-list-grid';
+  const sortedEvents = [...getEvents()].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateB - dateA;
+  });
+  if (!sortedEvents.length) {
+    container.innerHTML = '<div class="no-items" style="grid-column:1/-1; text-align:center;">📭 ยังไม่มี Event</div>';
+    return;
+  }
+  container.innerHTML = sortedEvents.map(e => `
+    <div class="event-list-item" onclick="openEventDetailModal('${e.id}')">
+      <div class="event-list-cover">
+        ${e.cover ? `<img src="${getDisplayUrl(e.cover)}" alt="">` : '<span>🖼️</span>'}
+      </div>
+      <div class="event-list-info">
+        <div class="event-list-name">${escapeHtml(e.name)}</div>
+        <div class="event-list-date">🗓️ ${formatDate(e.date)}</div>
+        <div style="font-size: 10px; color: var(--gold-dark); margin-top: 4px;">
+          🖼️ ${(e.photos || []).length} ภาพ
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ปิด Modal รายละเอียด Event และลบออกจาก DOM
+function closeEventDetailModal() {
+  const modal = document.getElementById('eventDetailModal');
+  if (modal) modal.remove();
+}
+
+// เปิด Modal รายละเอียด Event (แบบเต็มหน้าจอ)
+function openEventDetailModal(eventId) {
+  // ลบ modal เก่าถ้ามี (ป้องกันซ้ำ)
+  closeEventDetailModal();
+
+  const ev = getEvents().find(x => x.id === eventId);
+  if (!ev) return;
+
+  const views = getEventViews(eventId);
+  const downloads = getEventDownloads(eventId);
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.className = 'modal-overlay active';
+  modalOverlay.id = 'eventDetailModal';
+  // คลิกที่พื้นหลังด้านนอกก็ปิด
+  modalOverlay.onclick = function(e) {
+    if (e.target === modalOverlay) closeEventDetailModal();
+  };
+
+  const coverHtml = ev.cover
+    ? `<img src="${getDisplayUrl(ev.cover)}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`
+    : '<span style="font-size:48px;">🖼️</span>';
+
+  const descHtml = ev.desc
+    ? `<div style="background:var(--gold-bg); padding:12px; border-radius:10px; margin-bottom:16px;">
+         <span style="font-weight:600;">📝 รายละเอียด:</span> ${escapeHtml(ev.desc)}
+       </div>`
+    : '';
+
+  modalOverlay.innerHTML = `
+    <div class="modal-box large" style="max-width:600px;">
+      <div class="modal-header">
+        <span class="modal-title">📋 ${escapeHtml(ev.name)}</span>
+        <button class="modal-close" onclick="closeEventDetailModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="width:100%; height:200px; border-radius:12px; overflow:hidden; background:var(--gold-light); display:flex; align-items:center; justify-content:center;">
+            ${coverHtml}
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div style="background:var(--gold-bg); padding:12px; border-radius:10px;">
+            <div style="font-size:12px; color:var(--gray);">📅 วันที่</div>
+            <div style="font-weight:700;">${formatDate(ev.date)}</div>
+          </div>
+          <div style="background:var(--gold-bg); padding:12px; border-radius:10px;">
+            <div style="font-size:12px; color:var(--gray);">🖼️ รูปภาพ</div>
+            <div style="font-weight:700;">${(ev.photos || []).length} ภาพ</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div style="background:var(--gold-bg); padding:12px; border-radius:10px; text-align:center;">
+            <div style="font-size:12px; color:var(--gray);">👁️ ผู้เข้าชม</div>
+            <div style="font-weight:700; font-size:20px;">${views}</div>
+          </div>
+          <div style="background:var(--gold-bg); padding:12px; border-radius:10px; text-align:center;">
+            <div style="font-size:12px; color:var(--gray);">⬇️ ดาวน์โหลดรูป</div>
+            <div style="font-weight:700; font-size:20px;">${downloads}</div>
+          </div>
+        </div>
+        ${descHtml}
+        <div style="text-align:center;">
+          <button class="btn-primary" onclick="closeEventDetailModal(); openEventView('${ev.id}', 'admin-home')" style="max-width:200px; margin:0 auto;">
+            🔍 ดูรูปภาพทั้งหมด
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modalOverlay);
+}
+// ========== EVENT STATISTICS (views, downloads) ==========
+function getEventStats() {
+  return JSON.parse(localStorage.getItem('tnk_event_stats') || '{}');
+}
+function saveEventStats(stats) {
+  localStorage.setItem('tnk_event_stats', JSON.stringify(stats));
+}
+function incrementEventViews(eventId) {
+  const stats = getEventStats();
+  if (!stats[eventId]) stats[eventId] = { views: 0, downloads: 0 };
+  stats[eventId].views = (stats[eventId].views || 0) + 1;
+  saveEventStats(stats);
+}
+function incrementEventDownloads(eventId) {
+  const stats = getEventStats();
+  if (!stats[eventId]) stats[eventId] = { views: 0, downloads: 0 };
+  stats[eventId].downloads = (stats[eventId].downloads || 0) + 1;
+  saveEventStats(stats);
+}
+function getEventViews(eventId) {
+  return getEventStats()[eventId]?.views || 0;
+}
+function getEventDownloads(eventId) {
+  return getEventStats()[eventId]?.downloads || 0;
+}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>eruda.init();</script>
