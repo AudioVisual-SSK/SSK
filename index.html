@@ -3,26 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TNK OFFICIAL</title>
+<title>SSK OFFICIAL</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Sarabun:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
 <style>
   /* ========== CSS EXACTLY AS PROVIDED (UNCHANGED) ========== */
   :root {
-    --gold: #C9A84C;
-    --gold-light: #F5E6C0;
-    --gold-dark: #8B6914;
-    --gold-bg: #FBF3DC;
-    --gold-divider: #B8922A;
-    --white: #FFFFFF;
-    --black: #1A1A1A;
-    --red: #E53E3E;
-    --green: #38A169;
-    --blue: #3182CE;
-    --gray: #718096;
-    --gray-light: #F7FAFC;
-    --shadow: 0 4px 20px rgba(0,0,0,0.12);
-    --shadow-lg: 0 10px 40px rgba(0,0,0,0.18);
-  }
+  --gold: #F4A2B5;           /* สีชมพูหลัก */
+  --gold-light: #FDE2E4;     /* ชมพูอ่อนมาก */
+  --gold-dark: #D86F8C;      /* ชมพูเข้มขึ้น */
+  --gold-bg: #FFF0F2;        /* พื้นหลังชมพูนวล */
+  --gold-divider: #EAA9B4;   /* สีเส้นกั้น */
+  --white: #FFFFFF;
+  --black: #1A1A1A;
+  --red: #E53E3E;
+  --green: #38A169;
+  --blue: #3182CE;
+  --gray: #718096;
+  --gray-light: #F7FAFC;
+  --shadow: 0 4px 20px rgba(0,0,0,0.12);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.18);
+}
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
   font-family: 'Sarabun', sans-serif;
@@ -1100,7 +1100,7 @@ body {
 
 <!-- ====== PUBLIC HEADER ====== -->
 <div id="header-section">
-  <div class="logo-tnk">TNK</div>
+  <div class="logo-tnk">SSK</div>
   <div class="logo-official">OFFICIAL</div>
   <div class="admin-header-top">
     <button class="btn-manage" onclick="openModal('loginModal')">🔐 เข้าสู่ระบบ</button>
@@ -1118,7 +1118,7 @@ body {
 
 <!-- ====== ADMIN HEADER ====== -->
 <div id="admin-header">
-  <div class="logo-tnk">TNK</div>
+  <div class="logo-tnk">SSK</div>
   <div class="logo-official">OFFICIAL</div>
   <div class="admin-header-top">
     <button class="btn-manage" onclick="scrollToTop()">⚙️ จัดการระบบ</button>
@@ -1265,9 +1265,10 @@ body {
 
 <!-- ====== EVENT VIEW (Public/Home) ====== -->
 <div id="event-view">
-  <div class="event-view-header">
-    <button class="btn-back" onclick="closeEventView()">← กลับ</button>
-  </div>
+  <div class="event-view-header" style="display: flex; justify-content: space-between; align-items: center;">
+  <button class="btn-back" onclick="closeEventView()">← กลับ</button>
+  <button class="btn-back" style="background: var(--gold); color: white; border-color: var(--gold-dark);" onclick="refreshCurrentEvent()">🔄 รีเฟรช</button>
+</div>
   <div class="event-view-card" id="event-view-card">
     <div class="event-view-cover" id="ev-cover">🖼️</div>
     <div class="event-view-body">
@@ -2067,7 +2068,8 @@ async function saveEventToFirestore(event) {
       cover: event.cover || '',
       photos: event.photos || [],
       visible: event.visible !== false,
-      createdAt: event.createdAt || window.serverTimestamp()
+      createdAt: event.createdAt || window.serverTimestamp(),
+      faceSearchThreshold: event.faceSearchThreshold  // ← เพิ่มบรรทัดนี้
     });
     console.log('✅ บันทึก Event ลง Firestore สำเร็จ');
   } catch (err) {
@@ -3459,6 +3461,41 @@ function closeEventView() {
   currentEventPage = 1;
 }
 
+function refreshCurrentEvent() {
+  if (!currentEventView) {
+    showToast('⚠️ ไม่มี event ที่เปิดอยู่');
+    return;
+  }
+  const ev = getEvents().find(x => x.id === currentEventView);
+  if (!ev) {
+    showToast('❌ ไม่พบข้อมูล event นี้แล้ว');
+    closeEventView();
+    return;
+  }
+  
+  // อัปเดตปกและชื่อ
+  document.getElementById('ev-cover').innerHTML = ev.cover
+    ? `<img src="${getDisplayUrl(ev.cover)}" alt="">`
+    : '🖼️';
+  document.getElementById('ev-name').textContent = ev.name;
+  document.getElementById('ev-meta').innerHTML = `
+    <span>🗓️ ${formatDate(ev.date)}</span>
+    <span>🖼️ ${(ev.photos||[]).length} ภาพ</span>
+  `;
+  
+  // รีเซ็ตหน้าเป็นหน้าแรกและเรนเดอร์รูปใหม่
+  currentEventPage = 1;
+  renderEventPhotos(1);
+  
+  // รีเซ็ตสถานะการค้นหาใบหน้า (ถ้ากำลังแสดงผลลัพธ์อยู่)
+  const faceResults = document.getElementById('face-search-results');
+  if (faceResults) faceResults.style.display = 'none';
+  const faceStatus = document.getElementById('face-search-status');
+  if (faceStatus) faceStatus.style.display = 'none';
+  
+  showToast('🔄 รีเฟรชข้อมูลเรียบร้อย');
+}
+
 function renderEventPhotos(page) {
   const ev = getEvents().find(x => x.id === currentEventView);
   if (!ev) return;
@@ -3548,11 +3585,18 @@ function openEventView(id, mode) {
 renderEventPhotos(1);
 
   // ตรวจสอบว่า Event นี้ปิดการค้นหาใบหน้าหรือไม่
+// ตรวจสอบว่า Event นี้ปิดการค้นหาใบหน้าหรือไม่
 var faceSearchBox = document.querySelector('.search-face-box');
 var faceResults = document.getElementById('face-search-results');
 
-// ✅ แปลงเป็นตัวเลขให้แน่ใจ (รองรับกรณี string หรือ undefined)
-var threshold = Number(ev.faceSearchThreshold);
+// ✅ อ่าน threshold โดยมี fallback เป็นค่า default จาก global settings
+let threshold = ev.faceSearchThreshold;
+if (threshold === undefined || threshold === null) {
+  threshold = (currentGlobalSettings && currentGlobalSettings.defaultThreshold !== undefined)
+    ? currentGlobalSettings.defaultThreshold
+    : 0.45;
+}
+threshold = Number(threshold);
 
 if (threshold === -1 || isNaN(threshold)) {
   // ถ้าไม่อนุญาต หรือไม่มีค่า → ซ่อนกล่องค้นหาและผลลัพธ์
