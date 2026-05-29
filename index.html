@@ -727,6 +727,16 @@
     cursor: pointer; z-index: 2; font-size: 11px;
   }
   .pub-tick.checked { background: var(--gold); border-color: var(--gold-dark); color: white; }
+  .face-score-badge {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(0,0,0,0.6); color: white;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 8px;
+    z-index: 2; font-family: 'Sarabun', sans-serif;
+  }
+  .face-score-high { background: rgba(34,139,34,0.8); }
+  .face-score-mid  { background: rgba(200,140,0,0.8); }
+  .face-score-low  { background: rgba(180,60,60,0.7); }
   .pub-dl-btn {
     position: absolute; bottom: 6px; right: 6px;
     background: rgba(0,0,0,0.5); color: white; border: none;
@@ -750,12 +760,31 @@
   .upload-progress { font-size: 13px; color: var(--gold-dark); text-align: center; margin-top: 8px; font-weight: 600; }
 
   .toast {
-    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(100px);
-    background: #1a1a1a; color: white; padding: 12px 24px; border-radius: 12px;
-    font-family:'Sarabun',sans-serif; font-size: 14px; z-index: 9999;
-    transition: transform 0.3s ease; box-shadow: var(--shadow-lg);
-    white-space: nowrap;
-  }
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #1a1a1a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 14px;
+  z-index: 9999;
+  transition: transform 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  white-space: normal;
+  max-width: 90vw;
+  text-align: center;
+  word-break: break-word;
+  opacity: 0;
+  pointer-events: none;
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
   .toast.show { transform: translateX(-50%) translateY(0); }
 
   .confirm-text { font-size: 15px; color: var(--black); text-align: center; margin-bottom: 18px; line-height: 1.6; }
@@ -1594,11 +1623,11 @@ body {
         <label class="form-label">Threshold (ยิ่งน้อย = เข้มงวด)</label>
         <select id="threshold-select" class="form-input">
           <option value="0.35">0.35 - เข้มงวดมาก</option>
-          <option value="0.40">0.40 - เข้มงวด</option>
-          <option value="0.45">0.45 - สมดุล (แนะนำ)</option>
-          <option value="0.50">0.50</option>
-          <option value="0.55">0.55</option>
-          <option value="0.60">0.60 - ยืดหยุ่น</option>
+          <option value="0.38">0.38 - เข้มงวด</option>
+          <option value="0.42">0.42 - แนะนำ (แม่นยำ)</option>
+          <option value="0.45">0.45 - สมดุล</option>
+          <option value="0.50">0.50 - ยืดหยุ่น</option>
+          <option value="0.55">0.55 - ยืดหยุ่นมาก</option>
           <option value="-1">🚫 ไม่อนุญาตให้ค้นหาใบหน้า</option>
         </select>
       </div>
@@ -1627,7 +1656,8 @@ body {
 <!-- Firebase SDK (ต้องโหลดก่อน) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, getDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBWntP6GH2pCDwc2pVyUhF4cm7QwUumh0w",
@@ -1640,9 +1670,17 @@ body {
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
 
   // ทำให้ใช้จาก global scope ได้
   window.db = db;
+  window.auth = auth;
+  window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+  window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+  window.signOut = signOut;
+  window.setPersistence = setPersistence;
+  window.browserLocalPersistence = browserLocalPersistence;
+  window.browserSessionPersistence = browserSessionPersistence;
   window.collection = collection;
   window.onSnapshot = onSnapshot;
   window.doc = doc;
@@ -1650,7 +1688,9 @@ body {
   window.deleteDoc = deleteDoc;
   window.serverTimestamp = serverTimestamp;
   window.getDocs = getDocs;
-  window.getDoc = getDoc;   // ← เพิ่มบรรทัดนี้
+  window.getDoc = getDoc;
+  window.query = query;
+  window.where = where;
 
   // ส่งสัญญาณว่า Firebase พร้อมแล้ว
   window.firebaseReady = true;
@@ -1659,6 +1699,154 @@ body {
 <script>
 // ======= STATE =======
 let currentUser = null;
+let usersUnsubscribe = null;
+let pendingUnsubscribe = null;
+let requestsUnsubscribe = null;
+let eventsUnsubscribe = null;
+let cachedUsers = [];
+let cachedPending = [];   // ← คงไว้ที่เดียว
+function getUsers() { return cachedUsers; }
+
+// ========== PENDING HELPER (Firestore) ==========
+async function savePendingToFirestore(pendingId, pendingData) {
+  if (!window.db) throw new Error('Firebase not ready');
+  const pendingRef = window.doc(window.db, "pending", pendingId);
+  await window.setDoc(pendingRef, {
+    ...pendingData,
+    id: pendingId,
+    createdAt: window.serverTimestamp()
+  }, { merge: true });
+}
+
+async function deletePendingFromFirestore(pendingId) {
+  if (!window.db) throw new Error('Firebase not ready');
+  await window.deleteDoc(window.doc(window.db, "pending", pendingId));
+}
+
+function getPending() { return cachedPending; }
+
+function initPendingListener() {
+  if (!window.db) return;
+  if (!currentUser) return;
+
+  // รอให้ role พร้อมก่อน (บางครั้ง Firestore sync ช้ากว่า auth)
+  const role = currentUser.role;
+  if (!role) {
+    setTimeout(initPendingListener, 1000);
+    return;
+  }
+
+  if (role !== 'CEO' && role !== 'SuperAdmin') {
+    cachedPending = [];
+    if (pendingUnsubscribe) { pendingUnsubscribe(); pendingUnsubscribe = null; }
+    return;
+  }
+
+  if (pendingUnsubscribe) { pendingUnsubscribe(); pendingUnsubscribe = null; }
+
+  pendingUnsubscribe = window.onSnapshot(
+    window.collection(window.db, "pending"),
+    (snapshot) => {
+      cachedPending = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (currentUser &&
+          document.getElementById('tab-member') &&
+          !document.getElementById('tab-member').classList.contains('hidden')) {
+        renderMembers();
+      }
+      updateMemberBadge();
+    },
+    (err) => {
+      if (err.code === 'permission-denied') {
+        // หยุด listener ทันที ไม่ต้อง retry
+        if (pendingUnsubscribe) { pendingUnsubscribe(); pendingUnsubscribe = null; }
+        if (role === 'CEO' || role === 'SuperAdmin') {
+          console.warn("⚠️ pending permission denied:", err);
+        }
+      }
+    }
+  );
+}
+
+// ========== MIGRATE OLD PENDING (ลบ pending เดิมออกจาก localStorage) ==========
+async function migrateOldPending() {
+  if (localStorage.getItem('pending_migrated')) return;
+  const oldPending = JSON.parse(localStorage.getItem('tnk_pending') || '[]');
+  if (oldPending.length > 0) {
+    console.warn('พบ pending เก่าใน localStorage (', oldPending.length, 'รายการ) ซึ่งไม่มี uid ไม่สามารถ migrate ได้');
+    console.warn('กรุณาลบ pending เหล่านี้ด้วยตนเอง หรือแจ้ง Admin ให้ดำเนินการ');
+    // ตัวเลือก: ลบ localStorage pending ทิ้งเลย (ถ้าต้องการ)
+    // localStorage.removeItem('tnk_pending');
+  }
+  localStorage.setItem('pending_migrated', 'done');
+}
+
+async function saveUserToFirestore(uid, userData) {
+  if (!window.db) throw new Error('Firebase not ready');
+  const userRef = window.doc(window.db, "users", uid);
+  await window.setDoc(userRef, {
+    ...userData,
+    uid: uid,
+    createdAt: window.serverTimestamp()
+  }, { merge: true });
+}
+
+async function getUserFromFirestore(uid) {
+  if (!window.db) return null;
+  const snap = await window.getDoc(window.doc(window.db, "users", uid));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
+}
+
+function initUsersListener() {
+  if (!window.db) return;
+  if (!currentUser) return;
+  // ทุกคนที่ล็อกอินจะได้รับ users ทั้งหมด (rules อนุญาตอยู่แล้ว)
+  if (usersUnsubscribe) usersUnsubscribe();
+  usersUnsubscribe = window.onSnapshot(window.collection(window.db, "users"), (snapshot) => {
+    cachedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (currentUser && document.getElementById('tab-member') && !document.getElementById('tab-member').classList.contains('hidden')) {
+      renderMembers();
+    }
+  }, (err) => {
+    console.warn("users listener error:", err);
+  });
+}
+
+async function migrateCEO() {
+  if (localStorage.getItem('ceo_migrated')) return;
+  const oldUsers = JSON.parse(localStorage.getItem('tnk_users') || '[]');
+  const ceo = oldUsers.find(u => u.role === 'CEO' && (u.username === 'CEO' || u.isRoot === true));
+  if (!ceo) {
+    console.log('No CEO found in localStorage, skip migrate');
+    localStorage.setItem('ceo_migrated', 'skipped');
+    return;
+  }
+  const email = `${ceo.username}@ssk.local`;
+  try {
+    let uid;
+    try {
+      const signInResult = await window.signInWithEmailAndPassword(window.auth, email, ceo.password);
+      uid = signInResult.user.uid;
+    } catch {
+      const userCred = await window.createUserWithEmailAndPassword(window.auth, email, ceo.password);
+      uid = userCred.user.uid;
+    }
+    await saveUserToFirestore(uid, {
+      username: ceo.username,
+      name: ceo.name,
+      role: 'CEO',
+      avatar: ceo.avatar || null,
+      isRoot: true,
+      approved: true,
+      migratedFromLocal: true
+    });
+    localStorage.setItem('ceo_migrated', 'done');
+    console.log('✅ CEO migrated to Firestore');
+  } catch (err) {
+    console.error('Migration failed:', err);
+    localStorage.setItem('ceo_migrated', 'failed');
+  }
+}
 let regAvatarData = null;
 let lightboxPhotos = [];
 let lightboxIndex = 0;
@@ -1708,17 +1896,49 @@ let faceApiModelsLoaded = false;
 async function loadFaceApiModels() {
   if (faceApiModelsLoaded) return;
   const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+  for (let i = 0; i < 3; i++) {
+    try {
+      showToast(`⏳ กำลังโหลดโมเดล AI รอสักครู่...`);
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+      faceApiModelsLoaded = true;
+      showToast('✅ โมเดลพร้อมใช้งาน');
+      return;
+    } catch (e) {
+      console.warn(`⚠️ โหลดโมเดลครั้งที่ ${i + 1} ไม่สำเร็จ:`, e.message);
+      if (i < 2) await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  throw new Error('โหลดโมเดลไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ');
+}
+
+let faceApiLoading = false;
+
+async function ensureFaceApiLoaded() {
+  if (faceApiModelsLoaded) return true;
+  if (faceApiLoading) {
+    showToast('⏳ กำลังโหลดโมเดล กรุณารอสักครู่...');
+    while (!faceApiModelsLoaded && faceApiLoading) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return faceApiModelsLoaded;
+  }
+  faceApiLoading = true;
+  showToast('⏳ กำลังโหลดโมเดล AI (ครั้งแรกอาจใช้เวลาประมาณ 10-20 วินาที)...');
   try {
-    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    faceApiModelsLoaded = true;
-    console.log('✅ โมเดลพร้อม');
+    await loadFaceApiModels();
+    return true;
   } catch (e) {
-    console.error('❌ โหลดโมเดลไม่สำเร็จ:', e);
+    console.error(e);
+    showToast('❌ โหลดโมเดลไม่สำเร็จ กรุณารีเฟรชและลองใหม่');
+    return false;
+  } finally {
+    faceApiLoading = false;
   }
 }
-loadFaceApiModels();
+
+// loadFaceApiModels();  // ❌ โหลดทันทีตอนเปิดหน้า
 
 async function getFaceEncoding(file) {
   if (!faceApiModelsLoaded) {
@@ -1728,7 +1948,7 @@ async function getFaceEncoding(file) {
   }
   const img = await faceapi.bufferToImage(file);
   // ใช้ Options แบบเดียวกับโค้ดทดสอบที่แม่นยำ (default inputSize)
-  const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+  const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
   const detection = await faceapi.detectSingleFace(img, options)
     .withFaceLandmarks()
     .withFaceDescriptor();
@@ -1736,7 +1956,17 @@ async function getFaceEncoding(file) {
   return { embedding: Array.from(detection.descriptor) };
 }
 
+// cache encodings ใน memory ไม่ต้อง query Firestore ทุกครั้ง
+var faceEncodingsCache = null;
+var faceEncodingsCacheEventId = null;
+
 async function performFaceSearch(input) {
+  // ✅ ตรวจสอบและโหลดโมเดลก่อนเริ่มค้นหา (ถ้ายังไม่โหลด)
+  if (!await ensureFaceApiLoaded()) {
+    showToast('❌ โมเดลไม่พร้อม กรุณาลองใหม่อีกครั้ง');
+    return;
+  }
+
   if (!input.files[0]) return;
   
   var statusEl = document.getElementById('face-search-status');
@@ -1744,10 +1974,17 @@ async function performFaceSearch(input) {
   var resultsGrid = document.getElementById('face-results-grid');
   
   // แสดงสถานะกำลังค้นหา
-  if (statusEl) {
-    statusEl.style.display = 'block';
-    statusEl.innerHTML = '⏳ ระบบกำลังค้นหาใบหน้าของท่าน...';
-  }
+  if (statusEl) statusEl.innerHTML = '🔍 กำลังเปรียบเทียบกับภาพทั้งหมดในอีเวนต์...';
+
+    // ใช้ cache ถ้า event เดิม ไม่ต้อง query Firestore ซ้ำ
+    var snapshot;
+    if (faceEncodingsCache && faceEncodingsCacheEventId === currentEventView) {
+      snapshot = faceEncodingsCache;
+    } else {
+      snapshot = await window.getDocs(window.collection(window.db, 'faceEncodings'));
+      faceEncodingsCache = snapshot;
+      faceEncodingsCacheEventId = currentEventView;
+    }
   if (resultsEl) resultsEl.style.display = 'none';
   if (resultsGrid) resultsGrid.innerHTML = '';
   
@@ -1759,19 +1996,27 @@ async function performFaceSearch(input) {
   }, 30000);
 
   try {
-    // probe descriptor
     var probeImg = await faceapi.bufferToImage(input.files[0]);
-    var probeOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
-    var probeDet = await faceapi.detectSingleFace(probeImg, probeOptions)
+    var probeOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+    var probeDets = await faceapi.detectAllFaces(probeImg, probeOptions)
       .withFaceLandmarks()
-      .withFaceDescriptor();
-      
-    if (!probeDet) { 
+      .withFaceDescriptors();
+
+    if (!probeDets || probeDets.length === 0) {
       clearTimeout(timeoutId);
       if (statusEl) statusEl.innerHTML = '⚠️ ไม่พบใบหน้าในรูปภาพ กรุณาลองใช้รูปภาพที่มีใบหน้าชัดเจน';
       return;
     }
-    var probeDesc = probeDet.descriptor;
+
+    // เก็บทุก descriptor จากรูป probe (รองรับรูปที่มีหลายคน)
+    // เรียงจากใหญ่ไปเล็ก แล้วเอาแค่ 3 ใบหน้าแรก ประหยัด CPU
+    var probeDescs = probeDets
+      .sort(function(a, b) {
+        return (b.detection.box.width * b.detection.box.height) -
+               (a.detection.box.width * a.detection.box.height);
+      })
+      .slice(0, 3)
+      .map(function(d) { return d.descriptor; });
 
     if (statusEl) statusEl.innerHTML = '🔍 กำลังเปรียบเทียบกับภาพทั้งหมดในอีเวนต์...';
 
@@ -1779,42 +2024,51 @@ async function performFaceSearch(input) {
     
     var ev = getEvents().find(x => x.id === currentEventView);
     if (!ev) { clearTimeout(timeoutId); return; }
-    var threshold = ev.faceSearchThreshold ?? 0.45;
+    var threshold = ev.faceSearchThreshold ?? 0.42;
     if (threshold === -1) {
       clearTimeout(timeoutId);
       if (statusEl) statusEl.innerHTML = '🚫 อีเวนต์นี้ปิดการค้นหาใบหน้า';
       return;
     }
 
-    var matchedPhotoIds = [];
+    var matchedResults = [];
 
     snapshot.forEach(function(doc) {
       var data = doc.data();
       if (data.eventId !== currentEventView) return;
       var encodings = [];
       if (data.encodings) {
-        if (Array.isArray(data.encodings)) {
-          encodings = data.encodings;
-        } else {
-          encodings = Object.values(data.encodings);
-        }
+        encodings = Array.isArray(data.encodings)
+          ? data.encodings : Object.values(data.encodings);
       } else if (data.encoding) {
         encodings = [data.encoding];
       }
-      
-      for (var i = 0; i < encodings.length; i++) {
-        var dist = faceapi.euclideanDistance(probeDesc, encodings[i]);
-        if (dist < threshold) {
-          matchedPhotoIds.push(data.photoId);
-          break;
+      if (encodings.length === 0) return;
+
+      // เปรียบ probe ทุกใบหน้า กับ encoding ทุกใบหน้าในรูป
+      // เอา dist ต่ำสุดที่จับคู่ได้ดีที่สุด
+      var bestDist = Infinity;
+      for (var pi = 0; pi < probeDescs.length; pi++) {
+        for (var ei = 0; ei < encodings.length; ei++) {
+          var dist = faceapi.euclideanDistance(probeDescs[pi], encodings[ei]);
+          if (dist < bestDist) bestDist = dist;
         }
       }
+
+      if (bestDist < threshold) {
+        matchedResults.push({ photoId: data.photoId, dist: bestDist });
+      }
     });
+
+    matchedResults.sort(function(a, b) { return a.dist - b.dist; });
+    var matchedPhotoIds = matchedResults.map(function(r) { return r.photoId; });
 
     clearTimeout(timeoutId);
 
     // ส่วนของการแสดงผล
-    var matchedPhotos = ev.photos.filter(function(p) { return matchedPhotoIds.indexOf(p.id) !== -1; });
+    var matchedPhotos = matchedPhotoIds.map(function(pid) {
+      return ev.photos.find(function(p) { return p.id === pid; });
+    }).filter(Boolean);
 
     if (matchedPhotos.length === 0) {
       if (statusEl) statusEl.innerHTML = '🔍 ไม่พบรูปภาพที่ตรงกับใบหน้าของท่านในอีเวนต์นี้';
@@ -1822,12 +2076,28 @@ async function performFaceSearch(input) {
     } else {
       if (statusEl) statusEl.innerHTML = '✅ พบ ' + matchedPhotos.length + ' รูปภาพที่ตรงกับใบหน้าของท่าน';
       if (resultsEl) resultsEl.style.display = 'block';
-      
+
+      window.currentMatchedPhotos = matchedPhotos;
+
+      // สร้าง map dist สำหรับแสดง confidence
+      var distMap = {};
+      matchedResults.forEach(function(r) { distMap[r.photoId] = r.dist; });
+
       var grid = document.getElementById('face-results-grid');
-      grid.innerHTML = matchedPhotos.map(function(ph) {
+      grid.innerHTML = matchedPhotos.map(function(ph, i) {
+        var dist = distMap[ph.id] || 0;
+        // คำนวณ score จาก threshold จริง ไม่ใช่ค่าคงที่ 0.42
+        // dist=0 → 100%, dist=threshold → 0%
+        var score = Math.max(0, Math.round((1 - dist / threshold) * 100));
+        // ปรับ scale: รูปที่ dist ต่ำกว่า 70% ของ threshold ถือว่าแม่นมาก
+        var displayScore = dist < threshold * 0.5
+          ? Math.round(90 + (1 - dist / (threshold * 0.5)) * 10)   // 90-100%
+          : Math.round((1 - dist / threshold) * 90);                // 0-90%
+        var badgeClass = displayScore >= 80 ? 'face-score-high' : displayScore >= 55 ? 'face-score-mid' : 'face-score-low';
         return '<div class="pub-photo-wrap">' +
-          '<div class="pub-photo" onclick="openLightboxPublic(getEventPhotos(\'' + currentEventView + '\'),' + ev.photos.indexOf(ph) + ',\'' + currentEventView + '\')">' +
+          '<div class="pub-photo" onclick="openLightboxPublic(window.currentMatchedPhotos,' + i + ',\'' + currentEventView + '\')">' +
           '<img src="' + ph.data + '" alt=""></div>' +
+          '<span class="face-score-badge ' + badgeClass + '">' + displayScore + '%</span>' +
           '<button class="pub-dl-btn" onclick="downloadPhoto(\'' + ph.data + '\',\'photo.jpg\')">⬇️</button>' +
           '</div>';
       }).join('');
@@ -1889,22 +2159,19 @@ function initGlobalSettingsListener() {
 
 function initDisplaySettingsListener() {
   if (!window.db) {
-    console.warn('Firebase ยังไม่พร้อม รอสักครู่');
     setTimeout(initDisplaySettingsListener, 500);
     return;
   }
   const docRef = window.doc(window.db, "systemSettings", "displayConfig");
-  displaySettingsUnsubscribe = window.onSnapshot(docRef, (docSnap) => {
+  window.getDoc(docRef).then((docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data();
       currentDisplaySettings.photosPerPage = data.photosPerPage !== undefined ? data.photosPerPage : 20;
       currentDisplaySettings.avgImageSizeMB = data.avgImageSizeMB !== undefined ? data.avgImageSizeMB : 1.5;
     } else {
-      window.setDoc(docRef, { photosPerPage: 20, avgImageSizeMB: 1.5 }).catch(console.error);
       currentDisplaySettings.photosPerPage = 20;
       currentDisplaySettings.avgImageSizeMB = 1.5;
     }
-    // อัปเดต UI
     updateStorageUsage();
     if (document.getElementById('settings-photos-per-page')) {
       document.getElementById('settings-photos-per-page').value = currentDisplaySettings.photosPerPage;
@@ -1915,20 +2182,22 @@ function initDisplaySettingsListener() {
     if (currentEventView) {
       renderEventPhotos(currentEventPage);
     }
-  }, (err) => {
-    console.error('Error loading display settings:', err);
+  }).catch((err) => {
+    console.warn('Display settings ใช้ค่า default:', err.code);
+    currentDisplaySettings.photosPerPage = 20;
+    currentDisplaySettings.avgImageSizeMB = 1.5;
   });
 }
 
 async function saveDisplaySettings() {
   const perPage = parseInt(document.getElementById('settings-photos-per-page').value);
   const avgSize = parseFloat(document.getElementById('settings-avg-image-size').value);
-  if (isNaN(perPage) || perPage < 1) {
-    showToast('⚠️ กรุณาใส่จำนวนรูปต่อหน้า (อย่างน้อย 1)');
+  if (isNaN(perPage) || perPage < 1 || perPage > 100) {
+    showToast('⚠️ กรุณาใส่จำนวนรูปต่อหน้า (1–100)');
     return;
   }
-  if (isNaN(avgSize) || avgSize < 0.1) {
-    showToast('⚠️ กรุณาใส่ขนาดไฟล์เฉลี่ยที่ถูกต้อง');
+  if (isNaN(avgSize) || avgSize < 1 || avgSize > 5) {
+    showToast('⚠️ กรุณาใส่ขนาดไฟล์เฉลี่ย (1–5 MB)');
     return;
   }
   try {
@@ -1936,7 +2205,17 @@ async function saveDisplaySettings() {
       photosPerPage: perPage,
       avgImageSizeMB: avgSize
     }, { merge: true });
-    showToast('✅ บันทึกการตั้งค่า Display เรียบร้อย (ทุกคนเห็นเหมือนกัน)');
+    // อัปเดต currentDisplaySettings ทันที
+    currentDisplaySettings.photosPerPage = perPage;
+    currentDisplaySettings.avgImageSizeMB = avgSize;
+    // รีเฟรช storage usage
+    updateStorageUsage();
+    // รีเฟรชหน้ารูปปัจจุบัน
+    if (currentEventView) {
+      currentEventPage = 1;
+      renderEventPhotos(1);
+    }
+    showToast('✅ บันทึกการตั้งค่าเรียบร้อย');
   } catch (err) {
     console.error(err);
     showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
@@ -1945,34 +2224,57 @@ async function saveDisplaySettings() {
 
 function initFirestoreListeners() {
   if (!window.db) { console.warn('Firebase ยังไม่พร้อม'); return; }
-  const { collection, onSnapshot } = window;
 
-  onSnapshot(collection(window.db, "events"), (snapshot) => {
-    const events = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      events.push({ id: docSnap.id, ...data });
-    });
-    appData.events = events;
-    updateStorageUsage();
-    if (document.getElementById('event-threshold-list')) renderEventThresholdList();
-    if (currentUser) {
-      renderAdminHomeEvents();
-      renderDashboard();
-    } else {
-      renderPublicEvents();
-    }
-  });
+  // ========== EVENTS LISTENER ==========
+  if (currentUser) {
+    // Admin: อ่าน events ทั้งแบบ real-time (รวม visible=true/false)
+    if (eventsUnsubscribe) eventsUnsubscribe();
+    eventsUnsubscribe = window.onSnapshot(window.collection(window.db, "events"), (snapshot) => {
+      const events = [];
+      snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
+      appData.events = events;
+      updateStorageUsage();
+      if (document.getElementById('event-threshold-list')) renderEventThresholdList();
+      if (currentUser) {
+        renderAdminHomeEvents();
+        renderDashboard();
+      }
+      if (currentUser && document.getElementById('tab-request') && !document.getElementById('tab-request').classList.contains('hidden')) renderRequests();
+    }, (err) => console.warn("admin events listener error:", err));
+  } else {
+    // Public: query เฉพาะ events ที่ visible == true (ใช้ getDocs + interval)
+    const loadPublicEvents = async () => {
+      try {
+        const q = window.query(window.collection(window.db, "events"), window.where("visible", "==", true));
+        const snapshot = await window.getDocs(q);
+        const events = [];
+        snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
+        appData.events = events;
+        renderPublicEvents();
+      } catch (err) {
+        console.warn("public events load error:", err);
+      }
+    };
+    loadPublicEvents();
+    if (window.publicEventsInterval) clearInterval(window.publicEventsInterval);
+    window.publicEventsInterval = setInterval(loadPublicEvents, 30000);
+  }
 
-  onSnapshot(collection(window.db, "requests"), (snapshot) => {
-    const requests = [];
-    snapshot.forEach((docSnap) => {
-      requests.push({ id: docSnap.id, ...docSnap.data() });
-    });
-    appData.requests = requests;
+  // ========== REQUESTS LISTENER ==========
+  // เฉพาะ CEO และ SuperAdmin เท่านั้นถึง subscribe
+  if (currentUser && (currentUser.role === 'CEO' || currentUser.role === 'SuperAdmin')) {
+    if (requestsUnsubscribe) requestsUnsubscribe();
+    requestsUnsubscribe = window.onSnapshot(window.collection(window.db, "requests"), (snapshot) => {
+      const requests = [];
+      snapshot.forEach(doc => requests.push({ id: doc.id, ...doc.data() }));
+      appData.requests = requests;
+      updateRequestBadge();
+      if (currentUser && document.getElementById('tab-request') && !document.getElementById('tab-request').classList.contains('hidden')) renderRequests();
+    }, (err) => console.warn("requests listener error:", err));
+  } else {
+    appData.requests = [];
     updateRequestBadge();
-    if (currentUser) renderRequests();
-  });
+  }
 }
 
 // ====== CLOUDINARY REAL STORAGE USAGE ======
@@ -2057,6 +2359,10 @@ function saveCloudinaryCredentials() {
   showToast('✅ บันทึก API Key/Secret เรียบร้อย');
   updateCloudinaryStorageUI();
 }
+
+// ล้าง cache เพื่อให้ค้นหาเจอรูปที่เพิ่งอัปโหลด
+  faceEncodingsCache = null;
+  faceEncodingsCacheEventId = null;
 
 async function saveEventToFirestore(event) {
   if (!window.db) { showToast('⚠️ Firebase ยังไม่พร้อม'); return; }
@@ -2149,10 +2455,12 @@ resetCEOSingle();
 // ====== เริ่มต้นระบบเมื่อ Firebase พร้อม ======
 // แก้ไข window.startTNK (ส่วนที่มีอยู่แล้ว)
 window.startTNK = function() {
-  // resetCEOSingle();   // ไม่ต้องเรียกอีก เพราะเรียกไปแล้วข้างต้น (หรือจะเรียกไว้ก็ได้ แต่ flag ป้องกัน)
+  initUsersListener();
+  migrateCEO();
+  initPendingListener();
+  migrateOldPending();
   initFirestoreListeners();
   initGlobalSettingsListener();
-  initDisplaySettingsListener();
   const saved = DB.get('tnk_saved_login', null);
   if (saved) {
     const users = getUsers();
@@ -2245,47 +2553,122 @@ function renderAdminHomeEvents() {
   </div>`;
 }
 
+// ====== LOGIN LOCKOUT ======
+var loginAttempts = 0;
+var loginLockedUntil = 0;
+
+function checkLoginLock() {
+  if (Date.now() < loginLockedUntil) {
+    var sec = Math.ceil((loginLockedUntil - Date.now()) / 1000);
+    showToast('🔒 ล็อคชั่วคราว กรุณารอ ' + sec + ' วินาที');
+    return true;
+  }
+  return false;
+}
+
 // ====== LOGIN / REGISTER ======
-function doLogin() {
+async function doLogin() {
+  if (checkLoginLock()) return;
+
   const u = document.getElementById('login-user').value.trim();
   const p = document.getElementById('login-pass').value.trim();
   const rem = document.getElementById('remember-me').checked;
   if (!u || !p) { showToast('⚠️ กรุณากรอกข้อมูลให้ครบ'); return; }
-  const users = getUsers();
-  if (!users.find(x => x.username === 'CEO' && x.approved)) {
-    users.push({ id:'ceo_root', username:'CEO', password:'CEO1234', name:'ชิชิงอน', role:'CEO', isRoot:true, avatar:null, approved:true });
-    setUsers(users);
+
+  // ปิดปุ่มระหว่าง loading
+  const btn = document.querySelector('#loginModal .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังเข้าสู่ระบบ...'; }
+
+  const email = `${u}@ssk.local`;
+  try {
+    await window.setPersistence(window.auth,
+      rem ? window.browserLocalPersistence : window.browserSessionPersistence);
+
+    const userCred = await window.signInWithEmailAndPassword(window.auth, email, p);
+    const uid = userCred.user.uid;
+    const userData = await getUserFromFirestore(uid);
+    if (!userData) throw new Error('ไม่พบข้อมูลผู้ใช้');
+
+    if (userData.approved === false || userData.deleted === true) {
+      await window.signOut(window.auth);
+      showToast('⏳ บัญชีนี้ไม่ได้รับสิทธิ์เข้าใช้งาน');
+      return;
+    }
+
+    // login สำเร็จ — รีเซ็ต attempt
+    loginAttempts = 0;
+    loginLockedUntil = 0;
+
+    currentUser = { id: uid, ...userData };
+    DB.set('tnk_saved_login', rem ? { uid } : null);
+    closeModal('loginModal');
+    showAdminView();
+    showToast(`✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ${userData.name}`);
+  } catch (err) {
+    loginAttempts++;
+    if (loginAttempts >= 5) {
+      loginLockedUntil = Date.now() + 60000; // ล็อค 60 วินาที
+      loginAttempts = 0;
+      showToast('🔒 กรอกผิด 5 ครั้ง ล็อค 60 วินาที');
+    } else {
+      showToast('❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (' + loginAttempts + '/5)');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚀 เข้าสู่ระบบ'; }
   }
-  const user = users.find(x => x.username === u && x.password === p);
-  if (!user) { showToast('❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); return; }
-  if (!user.approved) { showToast('⏳ บัญชีไม่ได้รับการอนุมัติ'); return; }
-  currentUser = user;
-  // ✅ บันทึกสถานะล็อกอินทุกครั้ง (เพื่อให้รีเฟรชแล้วยังอยู่ในระบบ)
-  DB.set('tnk_saved_login', { u, p });
-  closeModal('loginModal');
-  showAdminView();
-  showToast(`✅ เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ${user.name}`);
 }
 
-function doRegister() {
+async function doRegister() {
   const u = document.getElementById('reg-user').value.trim();
   const p = document.getElementById('reg-pass').value.trim();
   const n = document.getElementById('reg-name').value.trim();
+
+  // Validation
   if (!u || !p || !n) { showToast('⚠️ กรุณากรอกข้อมูลให้ครบ'); return; }
   if (!regAvatarData) { showToast('⚠️ กรุณาเลือกรูปโปรไฟล์'); return; }
-  const users = getUsers();
-  if (users.find(x => x.username === u)) { showToast('❌ ชื่อผู้ใช้ซ้ำ'); return; }
-  const pending = getPending();
-  if (pending.find(x => x.username === u)) { showToast('❌ รออนุมัติอยู่'); return; }
-  pending.push({ id: 'p_'+Date.now(), username: u, password: p, name: n, avatar: regAvatarData, role: 'Admin' });
-  setPending(pending);
-  regAvatarData = null;
-  document.getElementById('reg-avatar-preview').innerHTML = '<span style="font-size:28px">📷</span>';
-  document.getElementById('reg-user').value = '';
-  document.getElementById('reg-pass').value = '';
-  document.getElementById('reg-name').value = '';
-  closeModal('registerModal');
-  showToast('✅ สมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแล');
+  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(u)) {
+    showToast('⚠️ username ใช้ได้แค่ a-z, 0-9, ., _, - (3-20 ตัว)'); return;
+  }
+  if (p.length < 8) {
+    showToast('⚠️ รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'); return;
+  }
+  if (!/[A-Z]/.test(p) || !/[0-9]/.test(p)) {
+    showToast('⚠️ รหัสผ่านต้องมีตัวพิมพ์ใหญ่และตัวเลขอย่างน้อย 1 ตัว'); return;
+  }
+  if (n.length < 2 || n.length > 50) {
+    showToast('⚠️ ชื่อต้องมี 2-50 ตัวอักษร'); return;
+  }
+
+  const email = `${u}@ssk.local`;
+  const btn = document.querySelector('#registerModal .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังสมัคร...'; }
+
+  try {
+    const userCred = await window.createUserWithEmailAndPassword(window.auth, email, p);
+    const uid = userCred.user.uid;
+
+    await savePendingToFirestore(uid, {
+      uid, username: u, name: n,
+      avatar: regAvatarData,
+      role: 'Admin',
+      approved: false,
+      requestedAt: new Date().toISOString()
+    });
+
+    regAvatarData = null;
+    document.getElementById('reg-avatar-preview').innerHTML = '<span style="font-size:28px">📷</span>';
+    document.getElementById('reg-user').value = '';
+    document.getElementById('reg-pass').value = '';
+    document.getElementById('reg-name').value = '';
+    closeModal('registerModal');
+    showToast('✅ สมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแล');
+  } catch (err) {
+    let msg = err.message;
+    if (msg.includes('email-already-in-use')) msg = 'ชื่อผู้ใช้นี้ถูกใช้แล้ว';
+    showToast('❌ สมัครไม่สำเร็จ: ' + msg);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🎉 สมัครสมาชิก'; }
+  }
 }
 
 function handleRegAvatar(input) {
@@ -2298,6 +2681,29 @@ function handleRegAvatar(input) {
   reader.readAsDataURL(input.files[0]);
 }
 
+// ตรวจสิทธิ์ทุกครั้งที่เปลี่ยน tab — ป้องกัน session ค้าง
+async function verifyCurrentUser() {
+  if (!currentUser) return false;
+  try {
+    const userData = await getUserFromFirestore(currentUser.id);
+    if (!userData || userData.deleted === true || userData.approved === false) {
+      showToast('⚠️ บัญชีถูกระงับ กำลังออกจากระบบ...');
+      setTimeout(doLogout, 1500);
+      return false;
+    }
+    // อัปเดต role ถ้าถูกเปลี่ยน
+    if (userData.role !== currentUser.role) {
+      currentUser.role = userData.role;
+      const roleMap = { CEO:'👑 CEO', SuperAdmin:'⭐ SuperAdmin', Admin:'👤 Admin' };
+      const rd = document.getElementById('role-display');
+      if (rd) rd.textContent = roleMap[currentUser.role] || '👤 Admin';
+    }
+    return true;
+  } catch(e) {
+    return true; // ถ้า network error ให้ผ่านไปก่อน
+  }
+}
+
 // ====== SHOW ADMIN VIEW ======
 async function showAdminView() {
   document.getElementById('header-section').style.display = 'none';
@@ -2308,7 +2714,12 @@ async function showAdminView() {
   document.getElementById('admin-section-3').classList.add('active');
   const roleMap = { CEO:'👑 CEO', SuperAdmin:'⭐ SuperAdmin', Admin:'👤 Admin' };
   document.getElementById('role-display').textContent = roleMap[currentUser.role] || '👤 Admin';
-  // ✅ ใช้แท็บที่เคยอยู่ก่อนรีเฟรช ถ้าไม่มีให้ใช้ home
+  
+  // ✅ เพิ่ม 3 บรรทัดนี้
+  initUsersListener();
+  initPendingListener();
+  initFirestoreListeners();
+  
   const savedTab = localStorage.getItem('tnk_current_tab') || 'home';
   switchTab(savedTab, document.querySelector(`.nav-btn[onclick*="${savedTab}"]`));
   renderAdminHomeEvents();
@@ -2319,7 +2730,8 @@ async function showAdminView() {
   updateMemberBadge();
 }
 
-function doLogout() {
+async function doLogout() {
+  if (window.auth && window.signOut) await window.signOut(window.auth);
   currentUser = null;
   DB.set('tnk_saved_login', null);
   document.getElementById('header-section').style.display = 'block';
@@ -2337,21 +2749,24 @@ function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 // ====== TAB SWITCH ======
 function switchTab(tab, btn) {
+  // ตรวจสิทธิ์ทุกครั้งที่เปลี่ยน tab (async แต่ไม่ block UI)
+  if (currentUser) verifyCurrentUser();
+
   document.getElementById('event-view').classList.remove('active');
   document.getElementById('admin-section-3').classList.add('active');
-  
+
   const allTabs = ['home', 'dashboard', 'request', 'member', 'profile', 'settings', 'stats'];
   allTabs.forEach(t => {
     const el = document.getElementById('tab-' + t);
     if (el) el.classList.add('hidden');
   });
-  
+
   const selectedTab = document.getElementById('tab-' + tab);
   if (selectedTab) selectedTab.classList.remove('hidden');
-  
+
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  
+
   if (tab === 'dashboard') renderDashboard();
   if (tab === 'member') renderMembers();
   if (tab === 'request') renderRequests();
@@ -2359,7 +2774,7 @@ function switchTab(tab, btn) {
   if (tab === 'profile') renderProfile();
   if (tab === 'settings') renderSettings();
   if (tab === 'stats') renderStats();
-  
+
   localStorage.setItem('tnk_current_tab', tab);
 }
 
@@ -2549,7 +2964,8 @@ let currentThreshold = (ev.faceSearchThreshold !== undefined && ev.faceSearchThr
 // บันทึกค่า Threshold ลง Firestore
 async function saveThreshold() {
   const eventId = document.getElementById('threshold-event-id').value;
-  const newThreshold = parseFloat(document.getElementById('threshold-select').value);
+  const raw = document.getElementById('threshold-select').value;
+  const newThreshold = raw === '-1' ? -1 : parseFloat(raw);
   const events = getEvents();
   const idx = events.findIndex(e => e.id === eventId);
   if (idx < 0) return;
@@ -2638,25 +3054,62 @@ async function handlePhotoUpload(input) {
         if (evIndex !== -1) {
           showToast('🔍 กำลังวิเคราะห์ใบหน้า...');
           const img = await faceapi.bufferToImage(files[i]);
-          const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
-          const detections = await faceapi.detectAllFaces(img, options)
-            .withFaceLandmarks()
-            .withFaceDescriptors();   // plural!
+          const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+          const tinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 });
 
-          if (detections.length > 0) {
-            // เปลี่ยนจาก Array ของ Arrays เป็น Object (Firestore ไม่อนุญาต nested array)
-const encodingsObj = {};
-detections.forEach((d, idx) => {
-  encodingsObj[idx] = Array.from(d.descriptor);
-});
-const faceDoc = {
-  encodings: encodingsObj,
-  photoId: events[evIndex].photos[events[evIndex].photos.length - 1].id,
-  eventId: id,
-  url: imageUrl
-};
+          // ใช้ทั้ง SSD และ Tiny เพื่อจับใบหน้าได้ครอบคลุมขึ้น
+          const [detectionsSsd, detectionsTiny] = await Promise.all([
+            faceapi.detectAllFaces(img, options).withFaceLandmarks().withFaceDescriptors(),
+            faceapi.detectAllFaces(img, tinyOptions).withFaceLandmarks().withFaceDescriptors()
+          ]);
+
+          // รวมผลและกรอง duplicate (ใบหน้าที่ตำแหน่งใกล้กันมาก)
+          const detections = [...detectionsSsd];
+          detectionsTiny.forEach(function(td) {
+            var isDup = detectionsSsd.some(function(sd) {
+              var dx = sd.detection.box.x - td.detection.box.x;
+              var dy = sd.detection.box.y - td.detection.box.y;
+              return Math.sqrt(dx*dx + dy*dy) < 30;
+            });
+            if (!isDup) detections.push(td);
+          });
+
+          // --- multi-angle: flip รูปแนวนอนแล้ว encode ซ้ำ ---
+          let flippedDetections = [];
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width || img.naturalWidth;
+            canvas.height = img.height || img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(img, 0, 0);
+            const flippedImg = await faceapi.bufferToImage(
+              await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85))
+            );
+            flippedDetections = await faceapi.detectAllFaces(flippedImg, options)
+              .withFaceLandmarks()
+              .withFaceDescriptors();
+          } catch(fe) {
+            console.warn('flip encode ล้มเหลว:', fe.message);
+          }
+
+          // รวม detections ปกติ + flipped
+          const allDetections = [...detections, ...flippedDetections];
+
+          if (allDetections.length > 0) {
+            const encodingsObj = {};
+            allDetections.forEach((d, idx) => {
+              encodingsObj[idx] = Array.from(d.descriptor);
+            });
+            const faceDoc = {
+              encodings: encodingsObj,
+              photoId: events[evIndex].photos[events[evIndex].photos.length - 1].id,
+              eventId: id,
+              url: imageUrl
+            };
             await window.setDoc(window.doc(window.db, 'faceEncodings', faceDoc.photoId), faceDoc);
-            console.log(`✅ เก็บ ${detections.length} ใบหน้าแล้ว`);
+            console.log(`✅ เก็บ ${allDetections.length} ใบหน้า (รวม flip) แล้ว`);
           } else {
             console.warn('⚠️ ไม่พบใบหน้าในรูปนี้');
           }
@@ -2816,18 +3269,27 @@ function lightboxDownload() {
 }
 
 // ====== MEMBERS ======
-function renderMembers() { renderPending(); renderAllMembers(); updateMemberBadge(); }
+function renderMembers() {
+  renderPending();
+  renderAllMembers();
+  updateMemberBadge();
+}
 function renderPending() {
-  const pending = getPending();
   const container = document.getElementById('pending-list');
-  if (!pending.length) { container.innerHTML = '<div class="no-items">ไม่มีผู้สมัคร</div>'; updateMemberBadge(); return; }
+  if (!container) return;
+  const pending = cachedPending;
+  if (!pending.length) {
+    container.innerHTML = '<div class="no-items">ไม่มีผู้สมัคร</div>';
+    updateMemberBadge();
+    return;
+  }
   container.innerHTML = pending.map(p => `
     <div class="member-item" id="pend-${p.id}">
       <div class="member-item-top">
-        <div><div class="member-avatar">${p.avatar ? `<img src="${p.avatar}" alt="">` : '👤'}</div><div class="member-role-label">👤 บัญชีทั่วไป</div></div>
+        <div><div class="member-avatar">${p.avatar ? `<img src="${p.avatar}" alt="">` : '👤'}</div><div class="member-role-label">👤 รออนุมัติ</div></div>
         <div class="member-details">
-          <div class="member-info-line"><span class="member-info-label">🚩</span><span>${p.username}</span></div>
-          <div class="member-info-line"><span class="member-info-label">🔤</span><span>${p.name}</span></div>
+          <div class="member-info-line"><span class="member-info-label">🚩</span><span>${escapeHtml(p.username)}</span></div>
+          <div class="member-info-line"><span class="member-info-label">🔤</span><span>${escapeHtml(p.name)}</span></div>
           <div class="member-info-line"><span class="member-info-label">🔑</span><span>${canSeePassword() ? p.password : '••••••••'}</span></div>
         </div>
       </div>
@@ -2838,33 +3300,80 @@ function renderPending() {
     </div>`).join('');
   updateMemberBadge();
 }
-function approveMember(pid) {
-  const pending = getPending();
-  const p = pending.find(x => x.id === pid);
-  if (!p) return;
-  const users = getUsers();
-  users.push({ id: 'u_'+Date.now(), username: p.username, password: p.password, name: p.name, role: 'Admin', avatar: p.avatar, approved: true, isRoot: false });
-  setUsers(users);
-  setPending(pending.filter(x => x.id !== pid));
-  renderMembers();
-  showToast(`✅ อนุมัติ ${p.name} เรียบร้อย`);
-}
-function rejectMember(pid) { setPending(getPending().filter(x => x.id !== pid)); renderMembers(); showToast('❌ ปฏิเสธแล้ว'); }
+async function approveMember(pendingId) {
+  const pending = cachedPending.find(p => p.id === pendingId);
+  if (!pending) { showToast('ไม่พบข้อมูล'); return; }
 
-function renderAllMembers() {
-  const users = getUsers();
+  try {
+    // ย้ายข้อมูลไป collection users
+    await saveUserToFirestore(pending.uid, {
+      username: pending.username,
+      name: pending.name,
+      role: pending.role || 'Admin',
+      avatar: pending.avatar,
+      isRoot: false,
+      approved: true,
+    });
+    // ลบ pending
+    await deletePendingFromFirestore(pendingId);
+    showToast(`✅ อนุมัติ ${pending.name} เรียบร้อย`);
+    renderMembers();
+  } catch (err) {
+    console.error(err);
+    showToast('❌ อนุมัติไม่สำเร็จ');
+  }
+}
+
+async function rejectMember(pendingId) {
+  const pending = cachedPending.find(p => p.id === pendingId);
+  if (!pending) return;
+  try {
+    // (Optional) ลบ user ใน Firebase Auth ด้วย? อาจไม่จำเป็น
+    await deletePendingFromFirestore(pendingId);
+    showToast('❌ ปฏิเสธแล้ว');
+    renderMembers();
+  } catch (err) {
+    showToast('ลบไม่สำเร็จ');
+  }
+}
+
+async function renderAllMembers() {
+  const currentUserRole = currentUser?.role;
+  // กรองเฉพาะผู้ที่ยังไม่ถูกลบ (approved !== false และไม่มี deleted flag)
+  let users = cachedUsers.filter(u => u.approved !== false && !u.deleted);
+  
   const container = document.getElementById('all-members-list');
   const stats = document.getElementById('role-stats');
+  
+  if (!container) return;
+  
+  // แสดงสถิติ (ทุกคนเห็น)
   const ceoCount = users.filter(u => u.role === 'CEO').length;
   const superCount = users.filter(u => u.role === 'SuperAdmin').length;
   const adminCount = users.filter(u => u.role === 'Admin').length;
   stats.innerHTML = `<p>👑 CEO ${ceoCount} ท่าน</p><p>⭐ SuperAdmin ${superCount} ท่าน</p><p>👤 Admin ${adminCount} ท่าน</p>`;
-  const sorted = [ ...users.filter(u => u.id === currentUser.id), ...users.filter(u => u.id !== currentUser.id && u.role === 'CEO'), ...users.filter(u => u.id !== currentUser.id && u.role === 'SuperAdmin'), ...users.filter(u => u.id !== currentUser.id && u.role === 'Admin') ];
+  
+  if (users.length === 0) {
+    container.innerHTML = '<div class="no-items">ไม่มีข้อมูลสมาชิก</div>';
+    return;
+  }
+  
+  // เรียงลำดับ (ตัวเองขึ้นก่อน)
+  // เรียงลำดับ: ตัวเอง → CEO (isRoot) → CEO → SuperAdmin → Admin
+  const roleOrder = { 'CEO': 1, 'SuperAdmin': 2, 'Admin': 3 };
+  const sorted = users.sort((a, b) => {
+    if (a.id === currentUser.id) return -1;
+    if (b.id === currentUser.id) return 1;
+    if (a.isRoot && !b.isRoot) return -1;
+    if (!a.isRoot && b.isRoot) return 1;
+    return (roleOrder[a.role] || 9) - (roleOrder[b.role] || 9);
+  });
+  
   container.innerHTML = sorted.map(u => {
     const isSelf = u.id === currentUser.id;
     const showPass = canSeePasswordOf(u);
     const canChangeRole = canChangeRoleOf(u);
-    const canEdit = currentUser.isRoot;
+    const canEdit = (currentUserRole === 'CEO' && !u.isRoot) || (currentUserRole === 'SuperAdmin' && u.role === 'Admin');
     const canDelete = canDeleteUser(u);
     const roleOpts = getRoleOptions(u);
     return `
@@ -2872,8 +3381,8 @@ function renderAllMembers() {
         <div class="all-member-top">
           <div><div class="member-avatar">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div><div class="member-role-label">${u.isRoot ? '👑 บัญชีหลัก' : '👤 บัญชีทั่วไป'}</div></div>
           <div class="member-details">
-            <div class="member-info-line"><span class="member-info-label">🚩</span><span>${u.username}</span></div>
-            <div class="member-info-line"><span class="member-info-label">🔤</span><span>${u.name}</span></div>
+            <div class="member-info-line"><span class="member-info-label">🚩</span><span>${escapeHtml(u.username)}</span></div>
+            <div class="member-info-line"><span class="member-info-label">🔤</span><span>${escapeHtml(u.name)}</span></div>
             <div class="member-info-line"><span class="member-info-label">🔑</span><span>${showPass ? u.password : '••••••••'}</span></div>
           </div>
           ${isSelf ? '<div class="self-label">✨ บัญชีตนเอง</div>' : ''}
@@ -2881,8 +3390,8 @@ function renderAllMembers() {
         <hr class="all-member-divider">
         <div class="all-member-bottom">
           ${canChangeRole ? `<select class="role-select" onchange="changeRole('${u.id}',this.value)">${roleOpts}</select>` : `<span style="font-size:12px;color:var(--gold-dark);font-weight:600">${u.role}</span>`}
-          ${canEdit ? `<button class="btn-sm btn-sm-edit" onclick="openEditMember('${u.id}')">✏️ แก้ไข</button>` : `<button class="btn-sm btn-sm-edit" style="opacity:0.4">✏️ แก้ไข</button>`}
-          ${canDelete ? `<button class="btn-sm btn-sm-del" onclick="openDeleteMember('${u.id}')">🗑️ ลบ</button>` : `<button class="btn-sm btn-sm-del" style="opacity:0.4">🗑️ ลบ</button>`}
+          ${canEdit ? `<button class="btn-sm btn-sm-edit" onclick="openEditMember('${u.id}')">✏️ แก้ไข</button>` : `<button class="btn-sm btn-sm-edit" style="opacity:0.4" disabled>✏️ แก้ไข</button>`}
+          ${canDelete ? `<button class="btn-sm btn-sm-del" onclick="openDeleteMember('${u.id}')">🗑️ ลบ</button>` : `<button class="btn-sm btn-sm-del" style="opacity:0.4" disabled>🗑️ ลบ</button>`}
         </div>
       </div>`;
   }).join('');
@@ -2890,11 +3399,11 @@ function renderAllMembers() {
 
 // ====== MEMBER BADGE ======
 function updateMemberBadge() {
-  const cnt = getPending().length;
+  const cnt = cachedPending.length;
   const badge = document.getElementById('member-badge');
   if (badge) {
     if (cnt > 0) { badge.textContent = cnt; badge.classList.remove('hidden'); }
-    else { badge.textContent = '0'; badge.classList.add('hidden'); }
+    else { badge.classList.add('hidden'); }
   }
 }
 
@@ -2904,11 +3413,92 @@ function canSeePasswordOf(u) { if(!currentUser) return false; if(currentUser.isR
 function canChangeRoleOf(u) { if(!currentUser) return false; if(u.isRoot) return false; if(u.id===currentUser.id && !currentUser.isRoot) return false; if(currentUser.isRoot) return u.id!==currentUser.id; if(currentUser.role==='CEO' && !currentUser.isRoot) return u.role!=='CEO'; if(currentUser.role==='SuperAdmin') return u.role!=='CEO' && u.role!=='SuperAdmin'; return false; }
 function canDeleteUser(u) { if(!currentUser) return false; if(u.id===currentUser.id) return false; if(u.isRoot) return false; if(currentUser.isRoot) return true; if(currentUser.role==='CEO') return u.role!=='CEO'; if(currentUser.role==='SuperAdmin') return u.role==='Admin'; return false; }
 function getRoleOptions(u) { return ['CEO','SuperAdmin','Admin'].map(r => `<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`).join(''); }
-function changeRole(uid, newRole) { if(!canChangeRoleOf(getUsers().find(u=>u.id===uid))) { showToast('❌ ไม่มีสิทธิ์'); return; } const users = getUsers(); const idx = users.findIndex(u=>u.id===uid); if(idx<0) return; users[idx].role = newRole; setUsers(users); renderMembers(); showToast('✅ เปลี่ยนแล้ว'); }
-function openDeleteMember(uid) { const users = getUsers(); const u = users.find(x=>x.id===uid); if(!u) return; document.getElementById('del-member-id').value = uid; document.getElementById('del-member-preview').innerHTML = `<div class="member-avatar" style="width:42px;height:42px;">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div><div><div style="font-size:13px;font-weight:700">${u.name}</div><div style="font-size:12px;color:var(--gray)">${u.username} · ${u.role}</div></div>`; openModal('deleteMemberModal'); }
-function confirmDeleteMember() { const uid = document.getElementById('del-member-id').value; let users = getUsers(); users = users.filter(u=>u.id!==uid); setUsers(users); closeModal('deleteMemberModal'); renderMembers(); showToast('🗑️ ลบสมาชิกแล้ว'); }
-function openEditMember(uid) { const users = getUsers(); const u = users.find(x=>x.id===uid); if(!u) return; document.getElementById('em-id').value = uid; document.getElementById('em-user').value = u.username; document.getElementById('em-name').value = u.name; document.getElementById('em-pass').value = u.password; openModal('editMemberModal'); }
-function saveMemberEdit() { const uid = document.getElementById('em-id').value; const users = getUsers(); const idx = users.findIndex(u=>u.id===uid); if(idx<0) return; users[idx].username = document.getElementById('em-user').value.trim(); users[idx].name = document.getElementById('em-name').value.trim(); users[idx].password = document.getElementById('em-pass').value.trim(); setUsers(users); closeModal('editMemberModal'); renderMembers(); showToast('✅ บันทึกแล้ว'); }
+async function changeRole(uid, newRole) {
+  // ตรวจสอบสิทธิ์ก่อน (ใช้ cachedUsers แทน getUsers)
+  const targetUser = cachedUsers.find(u => u.id === uid);
+  if (!targetUser) { showToast('ไม่พบสมาชิก'); return; }
+  if (!canChangeRoleOf(targetUser)) { showToast('❌ ไม่มีสิทธิ์'); return; }
+
+  try {
+    await window.setDoc(window.doc(window.db, "users", uid), { role: newRole }, { merge: true });
+    showToast(`✅ เปลี่ยนบทบาทเป็น ${newRole} เรียบร้อย`);
+    // รีเฟรชหน้า member ทันที (cachedUsers จะอัปเดตผ่าน listener)
+    renderMembers();
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ เปลี่ยนไม่สำเร็จ: ' + err.message);
+  }
+}
+
+function openDeleteMember(uid) {
+  const u = cachedUsers.find(x => x.id === uid);
+  if (!u) return;
+  document.getElementById('del-member-id').value = uid;
+  document.getElementById('del-member-preview').innerHTML = `
+    <div class="member-avatar" style="width:42px;height:42px;">${u.avatar ? `<img src="${u.avatar}" alt="">` : '👤'}</div>
+    <div><div style="font-size:13px;font-weight:700">${u.name}</div><div style="font-size:12px;color:var(--gray)">${u.username} · ${u.role}</div></div>
+  `;
+  openModal('deleteMemberModal');
+}
+async function confirmDeleteMember() {
+  const uid = document.getElementById('del-member-id').value;
+  try {
+    // แทนที่จะลบเอกสาร ให้ตั้งค่า approved = false และเพิ่ม deleted flag
+    await window.setDoc(window.doc(window.db, "users", uid), {
+      approved: false,
+      deleted: true,
+      deletedAt: new Date().toISOString()
+    }, { merge: true });
+    
+    closeModal('deleteMemberModal');
+    // รีเฟรชหน้า member (cachedUsers จะถูกอัปเดตผ่าน listener)
+    renderMembers();
+    showToast('🗑️ ลบสมาชิกแล้ว (ไม่สามารถเข้าสู่ระบบได้อีก)');
+    
+    // หมายเหตุ: การลบ Authentication ยังคงต้องทำด้วยมือใน Firebase Console หรือใช้ Cloud Function
+    // หากต้องการให้ user หมดสิ้นจากระบบ แนะนำให้เข้าไปลบ Authentication ด้วยตนเอง
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ ลบไม่สำเร็จ: ' + err.message);
+  }
+}
+
+function openEditMember(uid) {
+  const u = cachedUsers.find(x => x.id === uid);
+  if (!u) return;
+  document.getElementById('em-id').value = uid;
+  document.getElementById('em-user').value = u.username || '';
+  document.getElementById('em-name').value = u.name || '';
+  document.getElementById('em-pass').value = '';   // ไม่แสดงรหัสผ่านเดิม
+  openModal('editMemberModal');
+}
+
+async function saveMemberEdit() {
+  const uid = document.getElementById('em-id').value;
+  const newUsername = document.getElementById('em-user').value.trim();
+  const newName = document.getElementById('em-name').value.trim();
+  const newPass = document.getElementById('em-pass').value.trim();
+
+  const updateData = {};
+  if (newUsername) updateData.username = newUsername;
+  if (newName) updateData.name = newName;
+  if (newPass) updateData.password = newPass;
+
+  if (Object.keys(updateData).length === 0) {
+    showToast('ไม่มีข้อมูลเปลี่ยนแปลง');
+    return;
+  }
+
+  try {
+    await window.setDoc(window.doc(window.db, "users", uid), updateData, { merge: true });
+    closeModal('editMemberModal');
+    renderMembers();
+    showToast('✅ แก้ไขสมาชิกเรียบร้อย');
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ แก้ไขไม่สำเร็จ: ' + err.message);
+  }
+}
 
 // ====== SETTINGS ======
 var settingsData = {
@@ -2926,16 +3516,23 @@ function switchSettingsTab(tabId, btn) {
 // ====== STORAGE USAGE (REAL‑TIME) ======
 let currentStorageUsage = { usedMB: 0, usedGB: 0, totalGB: 25, percent: 0, totalPhotos: 0, avgSizeMB: 1.5 };
 
+// เก็บค่า max ไว้ ไม่ให้ลดเมื่อลบรูป
+let maxRecordedPhotos = 0;
+
 function updateStorageUsage() {
   const events = getEvents();
   let totalPhotos = 0;
   events.forEach(ev => {
     totalPhotos += (ev.photos || []).length;
   });
-  
-  const avgSizeMB = currentDisplaySettings.avgImageSizeMB;   // ← แก้ตรงนี้
-  
-  const usedMB = totalPhotos * avgSizeMB;
+
+  // ใช้ค่าสูงสุดที่เคยมี ไม่ให้ลดเมื่อลบรูป
+  if (totalPhotos > maxRecordedPhotos) {
+    maxRecordedPhotos = totalPhotos;
+  }
+
+  const avgSizeMB = currentDisplaySettings.avgImageSizeMB;
+  const usedMB = maxRecordedPhotos * avgSizeMB;
   const totalGB = 25;
   const totalMB = totalGB * 1024;
   const percent = Math.min(100, (usedMB / totalMB) * 100);
@@ -2944,10 +3541,10 @@ function updateStorageUsage() {
     usedGB: (usedMB / 1024).toFixed(2),
     totalGB: totalGB,
     percent: percent.toFixed(1),
-    totalPhotos: totalPhotos,
+    totalPhotos: maxRecordedPhotos,
     avgSizeMB: avgSizeMB
   };
-  
+
   const storageContainer = document.getElementById('storage-usage-container');
   if (storageContainer) {
     storageContainer.innerHTML = renderStorageUsageHTML();
@@ -3007,11 +3604,11 @@ function renderSettingsContent(tabId) {
             <label>ระดับการค้นหาใบหน้า (Threshold)</label>
             <select id="settings-default-threshold" class="form-input">
               <option value="0.35">0.35 - เข้มงวดมาก</option>
-              <option value="0.40">0.40 - เข้มงวด</option>
-              <option value="0.45">0.45 - สมดุล (แนะนำ)</option>
-              <option value="0.50">0.50</option>
-              <option value="0.55">0.55</option>
-              <option value="0.60">0.60 - ยืดหยุ่น</option>
+              <option value="0.38">0.38 - เข้มงวด</option>
+              <option value="0.42">0.42 - แนะนำ (แม่นยำ)</option>
+              <option value="0.45">0.45 - สมดุล</option>
+              <option value="0.50">0.50 - ยืดหยุ่น</option>
+              <option value="0.55">0.55 - ยืดหยุ่นมาก</option>
               <option value="-1">🚫 ไม่อนุญาตให้ค้นหาใบหน้า</option>
             </select>
             <div style="margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--gold-dark);">
@@ -3388,69 +3985,117 @@ function renderProfile() {
     section.appendChild(block);
   }
 }
-function handleProfileAvatarChange(input) {
+async function handleProfileAvatarChange(input) {
   if (!input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('profile-avatar-display').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-    document.getElementById('profile-avatar-display').dataset.newAvatar = e.target.result;
-  };
-  reader.readAsDataURL(input.files[0]);
+  
+  try {
+    showToast('⬆️ กำลังอัปโหลดรูปโปรไฟล์...');
+    const imageUrl = await uploadToCloudinary(input.files[0]);
+    // เก็บ URL ไว้ใน dataset
+    document.getElementById('profile-avatar-display').dataset.newAvatar = imageUrl;
+    // แสดงรูปตัวอย่างทันที
+    document.getElementById('profile-avatar-display').innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    showToast('✅ อัปโหลดรูปโปรไฟล์สำเร็จ');
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ อัปโหลดรูปไม่สำเร็จ: ' + err.message);
+  }
 }
-function saveProfile() {
-  if (!currentUser) return;
-  const users = getUsers();
-  const idx = users.findIndex(u => u.id === currentUser.id);
-  if (idx < 0) return;
+async function saveProfile() {
+  if (!currentUser) {
+    showToast('⚠️ ไม่พบข้อมูลผู้ใช้ปัจจุบัน');
+    return;
+  }
+
+  const uid = window.auth.currentUser?.uid;
+  if (!uid) {
+    showToast('⚠️ ไม่พบ UID ผู้ใช้');
+    return;
+  }
+
   const newName = document.getElementById('profile-name-edit').value.trim();
-  var pwField = document.getElementById('profile-password-edit');
-  var newPass = pwField ? pwField.value.trim() : '';
-  const newAvatar = document.getElementById('profile-avatar-display').dataset.newAvatar;
-  if (currentUser.isRoot) { const newUser = document.getElementById('profile-username-edit').value.trim(); if (newUser) users[idx].username = newUser; }
-  if (newName) users[idx].name = newName;
-  if (newPass) users[idx].password = newPass;
-  if (newAvatar) users[idx].avatar = newAvatar;
-  setUsers(users);
-  currentUser = users[idx];
-  renderProfile();
-  renderMembers();
-  showToast('✅ บันทึกข้อมูลเรียบร้อย');
+  const newPass = document.getElementById('profile-password-edit')?.value.trim() || '';
+  const newAvatarUrl = document.getElementById('profile-avatar-display').dataset.newAvatar;
+
+  const updateData = {};
+  if (newName) updateData.name = newName;
+  if (newPass) updateData.password = newPass;
+  if (newAvatarUrl && newAvatarUrl.startsWith('http')) updateData.avatar = newAvatarUrl; // เฉพาะ URL เท่านั้น
+
+  if (currentUser.isRoot) {
+    const newUser = document.getElementById('profile-username-edit').value.trim();
+    if (newUser) updateData.username = newUser;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    showToast('ไม่มีข้อมูลเปลี่ยนแปลง');
+    return;
+  }
+
+  try {
+    const userRef = window.doc(window.db, "users", uid);
+    await window.setDoc(userRef, updateData, { merge: true });
+
+    // อัปเดต currentUser และ cachedUsers
+    currentUser = { ...currentUser, ...updateData, id: uid };
+    const idx = cachedUsers.findIndex(u => u.id === uid);
+    if (idx !== -1) cachedUsers[idx] = { ...cachedUsers[idx], ...updateData };
+    else cachedUsers.push({ id: uid, ...updateData });
+
+    renderProfile();
+    renderMembers();
+    showToast('✅ บันทึกข้อมูลเรียบร้อย');
+  } catch (err) {
+    console.error('❌ บันทึกโปรไฟล์ล้มเหลว:', err);
+    showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
+  }
 }
-function updatePassword() {
+async function updatePassword() {
   if (!currentUser) return;
 
-  var oldP = document.getElementById('profile-old-pass').value.trim();
-  var newP = document.getElementById('profile-new-pass').value.trim();
-  var confirmP = document.getElementById('profile-confirm-pass').value.trim();
+  const oldP = document.getElementById('profile-old-pass').value.trim();
+  const newP = document.getElementById('profile-new-pass').value.trim();
+  const confirmP = document.getElementById('profile-confirm-pass').value.trim();
 
   if (!oldP || !newP || !confirmP) {
     showToast('⚠️ กรุณากรอกให้ครบทั้ง 3 ช่อง');
     return;
   }
-
-  var users = getUsers();
-  var idx = users.findIndex(u => u.id === currentUser.id);
-  if (idx < 0) return;
-
-  if (users[idx].password !== oldP) {
-    showToast('❌ รหัสผ่านปัจจุบันไม่ถูกต้อง');
+  if (newP.length < 6) {
+    showToast('⚠️ รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
     return;
   }
-
   if (newP !== confirmP) {
-    showToast('❌ รหัสผ่านใหม่กับยืนยันรหัสผ่านไม่ตรงกัน');
+    showToast('❌ รหัสผ่านใหม่กับยืนยันไม่ตรงกัน');
     return;
   }
 
-  users[idx].password = newP;
-  setUsers(users);
-  currentUser = users[idx];
+  try {
+    const { EmailAuthProvider, reauthenticateWithCredential, updatePassword: fbUpdatePassword } =
+      await import("https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js");
 
-  document.getElementById('profile-old-pass').value = '';
-  document.getElementById('profile-new-pass').value = '';
-  document.getElementById('profile-confirm-pass').value = '';
+    const user = window.auth.currentUser;
+    if (!user) { showToast('❌ กรุณาเข้าสู่ระบบใหม่'); return; }
 
-  showToast('✅ เปลี่ยนรหัสผ่านเรียบร้อย');
+    // re-authenticate ด้วยรหัสเดิมก่อน
+    const credential = EmailAuthProvider.credential(user.email, oldP);
+    await reauthenticateWithCredential(user, credential);
+
+    // เปลี่ยนรหัสผ่านใน Firebase Auth
+    await fbUpdatePassword(user, newP);
+
+    document.getElementById('profile-old-pass').value = '';
+    document.getElementById('profile-new-pass').value = '';
+    document.getElementById('profile-confirm-pass').value = '';
+    showToast('✅ เปลี่ยนรหัสผ่านเรียบร้อย');
+  } catch (err) {
+    console.error(err);
+    if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      showToast('❌ รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    } else {
+      showToast('⚠️ เปลี่ยนรหัสผ่านไม่สำเร็จ: ' + err.message);
+    }
+  }
 }
 
 function getEventPhotos(id) { const ev = getEvents().find(x => x.id === id); return ev ? (ev.photos || []) : []; }
@@ -3488,11 +4133,20 @@ function refreshCurrentEvent() {
   renderEventPhotos(1);
   
   // รีเซ็ตสถานะการค้นหาใบหน้า (ถ้ากำลังแสดงผลลัพธ์อยู่)
+  // รีเซ็ตสถานะการค้นหาใบหน้า
   const faceResults = document.getElementById('face-search-results');
   if (faceResults) faceResults.style.display = 'none';
   const faceStatus = document.getElementById('face-search-status');
-  if (faceStatus) faceStatus.style.display = 'none';
-  
+  if (faceStatus) { faceStatus.style.display = 'none'; faceStatus.innerHTML = ''; }
+
+  // รีเซ็ต input ด้วย clone เพื่อให้เลือกไฟล์เดิมซ้ำได้
+  var searchInput = document.getElementById('faceSearchInput');
+  if (searchInput) {
+    var newInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newInput, searchInput);
+  }
+  window.currentMatchedPhotos = [];
+
   showToast('🔄 รีเฟรชข้อมูลเรียบร้อย');
 }
 
@@ -3560,6 +4214,9 @@ function renderPaginationControls(totalPages, currentPage) {
 
 function changeEventPage(page) {
   renderEventPhotos(page);
+  // เลื่อนขึ้นไปบนสุดของรูปในอีเวนต์
+  const target = document.getElementById('event-view-section') || document.getElementById('ev-cover');
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 // เปิดหน้า Event View (ดูรูปทั้งหมด) – ใช้ getDisplayUrl สำหรับปกและรูป
 function openEventView(id, mode) {
@@ -3840,21 +4497,22 @@ function goToEventDashboard(eventId) {
 function closeFaceSearch() {
   var resultsContainer = document.getElementById('face-search-results');
   var statusEl = document.getElementById('face-search-status');
-  
-  // ซ่อนผลลัพธ์และข้อความสถานะ
   if (resultsContainer) resultsContainer.style.display = 'none';
-  if (statusEl) {
-    statusEl.style.display = 'none';
-    statusEl.innerHTML = '';
-  }
-  
-  // ล้างไฟล์ใน input ค้นหา
+  if (statusEl) { statusEl.style.display = 'none'; statusEl.innerHTML = ''; }
+
+  // รีเซ็ต input — สร้างใหม่ทั้งหมดแทน clone เพื่อไม่ให้ event หาย
   var searchInput = document.getElementById('faceSearchInput');
-  if (searchInput) searchInput.value = '';
-  
-  // ล้างผลลัพธ์ที่เก็บไว้ใน window
+  if (searchInput) {
+    var newInput = document.createElement('input');
+    newInput.type = 'file';
+    newInput.id = 'faceSearchInput';
+    newInput.accept = 'image/*';
+    newInput.onchange = function() { performFaceSearch(this); };
+    newInput.style.display = 'none';
+    searchInput.parentNode.replaceChild(newInput, searchInput);
+  }
+
   window.currentMatchedPhotos = [];
-  
   showToast('✅ ปิดผลการค้นหาเรียบร้อย');
 }
 
@@ -3881,8 +4539,14 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 // ====== TOAST ======
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  // ลบ timeout เก่าถ้ามี
+  if (window.toastTimeout) clearTimeout(window.toastTimeout);
+  window.toastTimeout = setTimeout(() => {
+    t.classList.remove('show');
+  }, 3000);
 }
 
 // ====== FORMAT DATE ======
@@ -3892,16 +4556,6 @@ function formatDate(d) {
   catch(e) { return d; }
 }
 
-// ====== รีเฟรชอัตโนมัติ (ถ้าต้องการ) ======
-(function startAutoRefresh() {
-  if (typeof currentUser !== 'undefined' && currentUser) return;
-  setInterval(async () => {
-    if (!currentUser) {
-      await renderPublicEvents();
-      console.log('🔄 รีเฟรชอัตโนมัติแล้ว');
-    }
-  }, 30000);
-})();
 // ========== STATS EVENTS (2 คอลัมน์ เหมือน Modal Event List) ==========
 function renderStatsEvents() {
   const container = document.getElementById('stats-events-grid');
