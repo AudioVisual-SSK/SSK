@@ -1657,7 +1657,8 @@ body {
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
   import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, getDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+  // ✅ ใหม่ — เพิ่ม onAuthStateChanged
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBWntP6GH2pCDwc2pVyUhF4cm7QwUumh0w",
@@ -1675,6 +1676,7 @@ body {
   // ทำให้ใช้จาก global scope ได้
   window.db = db;
   window.auth = auth;
+  window.auth.onAuthStateChanged = onAuthStateChanged.bind(null, auth);
   window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
   window.signInWithEmailAndPassword = signInWithEmailAndPassword;
   window.signOut = signOut;
@@ -1693,8 +1695,10 @@ body {
   window.where = where;
 
   // ส่งสัญญาณว่า Firebase พร้อมแล้ว
+  // ✅ ใหม่ — ไม่เรียก startTNK เอง ให้ onAuthStateChanged จัดการทั้งหมด
   window.firebaseReady = true;
-  if (window.startTNK) window.startTNK();
+  // เรียก bootstrap หลัง Firebase พร้อม
+  if (window._bootstrapApp) window._bootstrapApp();
 </script>
 <script>
 // ======= STATE =======
@@ -1725,46 +1729,39 @@ async function deletePendingFromFirestore(pendingId) {
 
 function getPending() { return cachedPending; }
 
+// ✅ ใหม่ — getDocs + polling
 function initPendingListener() {
   if (!window.db) return;
   if (!currentUser) return;
-
-  // รอให้ role พร้อมก่อน (บางครั้ง Firestore sync ช้ากว่า auth)
-  const role = currentUser.role;
-  if (!role) {
-    setTimeout(initPendingListener, 1000);
-    return;
-  }
-
-  if (role !== 'CEO' && role !== 'SuperAdmin') {
-    cachedPending = [];
-    if (pendingUnsubscribe) { pendingUnsubscribe(); pendingUnsubscribe = null; }
-    return;
-  }
-
   if (pendingUnsubscribe) { pendingUnsubscribe(); pendingUnsubscribe = null; }
 
-  pendingUnsubscribe = window.onSnapshot(
-    window.collection(window.db, "pending"),
-    (snapshot) => {
+  const role = currentUser.role;
+  if (role !== 'CEO' && role !== 'SuperAdmin') {
+    cachedPending = [];
+    updateMemberBadge();
+    return;
+  }
+
+  async function loadPending() {
+    try {
+      const snapshot = await window.getDocs(window.collection(window.db, "pending"));
       cachedPending = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if (currentUser &&
-          document.getElementById('tab-member') &&
+      if (currentUser && document.getElementById('tab-member') &&
           !document.getElementById('tab-member').classList.contains('hidden')) {
         renderMembers();
       }
       updateMemberBadge();
-    },
-    (err) => {
-      if (err.code === 'permission-denied') {
-        // หยุด listener ทันที ไม่ต้อง retry
-        if (pendingUnsubscribe) { pendingUnsubscribe(); pendingUnsubscribe = null; }
-        if (role === 'CEO' || role === 'SuperAdmin') {
-          console.warn("⚠️ pending permission denied:", err);
-        }
+    } catch (e) {
+      if (e.code !== 'permission-denied') {
+        console.warn("loadPending error:", e.code, e.message);
       }
     }
-  );
+  }
+
+  loadPending();
+  if (window._pendingInterval) clearInterval(window._pendingInterval);
+  window._pendingInterval = setInterval(loadPending, 30000);
+  window._reloadPending = loadPending;
 }
 
 // ========== MIGRATE OLD PENDING (ลบ pending เดิมออกจาก localStorage) ==========
@@ -1780,11 +1777,14 @@ async function migrateOldPending() {
   localStorage.setItem('pending_migrated', 'done');
 }
 
+// ✅ ใหม่ — กรอง password ออกก่อน save ลง Firestore
 async function saveUserToFirestore(uid, userData) {
   if (!window.db) throw new Error('Firebase not ready');
   const userRef = window.doc(window.db, "users", uid);
+  // ลบ password ออกก่อน save — Firebase Auth จัดการรหัสผ่านแยกต่างหากอยู่แล้ว
+  const { password, ...safeData } = userData;
   await window.setDoc(userRef, {
-    ...userData,
+    ...safeData,
     uid: uid,
     createdAt: window.serverTimestamp()
   }, { merge: true });
@@ -1797,19 +1797,29 @@ async function getUserFromFirestore(uid) {
   return { id: snap.id, ...snap.data() };
 }
 
+// ✅ ใหม่ — getDocs + polling แทน onSnapshot
 function initUsersListener() {
   if (!window.db) return;
   if (!currentUser) return;
-  // ทุกคนที่ล็อกอินจะได้รับ users ทั้งหมด (rules อนุญาตอยู่แล้ว)
-  if (usersUnsubscribe) usersUnsubscribe();
-  usersUnsubscribe = window.onSnapshot(window.collection(window.db, "users"), (snapshot) => {
-    cachedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    if (currentUser && document.getElementById('tab-member') && !document.getElementById('tab-member').classList.contains('hidden')) {
-      renderMembers();
+  if (usersUnsubscribe) { usersUnsubscribe(); usersUnsubscribe = null; }
+
+  async function loadUsers() {
+    try {
+      const snapshot = await window.getDocs(window.collection(window.db, "users"));
+      cachedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (currentUser && document.getElementById('tab-member') &&
+          !document.getElementById('tab-member').classList.contains('hidden')) {
+        renderMembers();
+      }
+    } catch (e) {
+      console.warn("loadUsers error:", e.code, e.message);
     }
-  }, (err) => {
-    console.warn("users listener error:", err);
-  });
+  }
+
+  loadUsers();
+  if (window._usersInterval) clearInterval(window._usersInterval);
+  window._usersInterval = setInterval(loadUsers, 30000);
+  window._reloadUsers = loadUsers;
 }
 
 async function migrateCEO() {
@@ -2126,35 +2136,36 @@ let appData = { events: [], requests: [] };
 let globalSettingsUnsubscribe = null;
 let currentGlobalSettings = { defaultThreshold: 0.45 };
 
-function initGlobalSettingsListener() {
+// ✅ ใหม่ — getDoc ครั้งเดียว ไม่ใช้ onSnapshot
+async function initGlobalSettingsListener() {
   if (!window.db) {
     setTimeout(initGlobalSettingsListener, 500);
     return;
   }
-  const docRef = window.doc(window.db, "systemSettings", "faceSearchConfig");
-  globalSettingsUnsubscribe = window.onSnapshot(docRef, (docSnap) => {
-  if (docSnap.exists()) {
-    const data = docSnap.data();
-    currentGlobalSettings.defaultThreshold = data.defaultThreshold !== undefined ? data.defaultThreshold : 0.45;
-  } else {
-    window.setDoc(docRef, { defaultThreshold: 0.45 }).catch(console.error);
+  if (globalSettingsUnsubscribe) { globalSettingsUnsubscribe(); globalSettingsUnsubscribe = null; }
+
+  try {
+    const docRef = window.doc(window.db, "systemSettings", "faceSearchConfig");
+    const docSnap = await window.getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      currentGlobalSettings.defaultThreshold = data.defaultThreshold !== undefined ? data.defaultThreshold : 0.45;
+    } else {
+      await window.setDoc(docRef, { defaultThreshold: 0.45 });
+      currentGlobalSettings.defaultThreshold = 0.45;
+    }
+    const selectEl = document.getElementById('settings-default-threshold');
+    if (selectEl) { selectEl.value = currentGlobalSettings.defaultThreshold; }
+    const valSpan = document.getElementById('current-default-threshold-value');
+    if (valSpan) {
+      valSpan.textContent = currentGlobalSettings.defaultThreshold === -1
+        ? '🚫 ไม่อนุญาตให้ค้นหาใบหน้า'
+        : currentGlobalSettings.defaultThreshold;
+    }
+  } catch (e) {
+    console.warn("initGlobalSettingsListener error:", e.message);
     currentGlobalSettings.defaultThreshold = 0.45;
   }
-  
-  // ✅ อัปเดต dropdown และข้อความถ้า element มีอยู่ในหน้า
-  const selectEl = document.getElementById('settings-default-threshold');
-  if (selectEl) {
-    selectEl.value = currentGlobalSettings.defaultThreshold;
-  }
-  const valSpan = document.getElementById('current-default-threshold-value');
-  if (valSpan) {
-    if (currentGlobalSettings.defaultThreshold === -1) {
-      valSpan.textContent = '🚫 ไม่อนุญาตให้ค้นหาใบหน้า';
-    } else {
-      valSpan.textContent = currentGlobalSettings.defaultThreshold;
-    }
-  }
-});
 }
 
 function initDisplaySettingsListener() {
@@ -2196,9 +2207,10 @@ async function saveDisplaySettings() {
     showToast('⚠️ กรุณาใส่จำนวนรูปต่อหน้า (1–100)');
     return;
   }
-  if (isNaN(avgSize) || avgSize < 1 || avgSize > 5) {
-    showToast('⚠️ กรุณาใส่ขนาดไฟล์เฉลี่ย (1–5 MB)');
-    return;
+  // ✅ ใหม่ — ให้ตรงกับ input ที่ตั้ง max="10" ไว้
+  if (isNaN(avgSize) || avgSize < 0.1 || avgSize > 10) {
+  showToast('⚠️ กรุณาใส่ขนาดไฟล์เฉลี่ย (0.1–10 MB)');
+  return;
   }
   try {
     await window.setDoc(window.doc(window.db, "systemSettings", "displayConfig"), {
@@ -2225,56 +2237,76 @@ async function saveDisplaySettings() {
 function initFirestoreListeners() {
   if (!window.db) { console.warn('Firebase ยังไม่พร้อม'); return; }
 
-  // ========== EVENTS LISTENER ==========
-  if (currentUser) {
-    // Admin: อ่าน events ทั้งแบบ real-time (รวม visible=true/false)
-    if (eventsUnsubscribe) eventsUnsubscribe();
-    eventsUnsubscribe = window.onSnapshot(window.collection(window.db, "events"), (snapshot) => {
+  // ========== EVENTS: ใช้ getDocs + polling แทน onSnapshot ==========
+  // เหตุผล: onSnapshot ใช้ WebSocket long-lived connection
+  //         บนมือถือ/เน็ตไม่เสถียร stream จะ error บ่อย
+  //         getDocs เรียกครั้งเดียวเสร็จ เสถียรกว่ามาก
+
+  async function loadEvents() {
+    try {
+      const snapshot = await window.getDocs(window.collection(window.db, "events"));
       const events = [];
-      snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
+      snapshot.forEach(docSnap => events.push({ id: docSnap.id, ...docSnap.data() }));
       appData.events = events;
-      updateStorageUsage();
-      if (document.getElementById('event-threshold-list')) renderEventThresholdList();
+
       if (currentUser) {
+        updateStorageUsage();
+        if (document.getElementById('event-threshold-list')) renderEventThresholdList();
         renderAdminHomeEvents();
         renderDashboard();
-      }
-      if (currentUser && document.getElementById('tab-request') && !document.getElementById('tab-request').classList.contains('hidden')) renderRequests();
-    }, (err) => console.warn("admin events listener error:", err));
-  } else {
-    // Public: query เฉพาะ events ที่ visible == true (ใช้ getDocs + interval)
-    const loadPublicEvents = async () => {
-      try {
-        const q = window.query(window.collection(window.db, "events"), window.where("visible", "==", true));
-        const snapshot = await window.getDocs(q);
-        const events = [];
-        snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
-        appData.events = events;
+        if (document.getElementById('tab-request') &&
+            !document.getElementById('tab-request').classList.contains('hidden')) {
+          renderRequests();
+        }
+      } else {
         renderPublicEvents();
-      } catch (err) {
-        console.warn("public events load error:", err);
       }
-    };
-    loadPublicEvents();
-    if (window.publicEventsInterval) clearInterval(window.publicEventsInterval);
-    window.publicEventsInterval = setInterval(loadPublicEvents, 30000);
+    } catch (e) {
+      console.warn("loadEvents error:", e.code, e.message);
+    }
   }
 
-  // ========== REQUESTS LISTENER ==========
-  // เฉพาะ CEO และ SuperAdmin เท่านั้นถึง subscribe
-  if (currentUser && (currentUser.role === 'CEO' || currentUser.role === 'SuperAdmin')) {
-    if (requestsUnsubscribe) requestsUnsubscribe();
-    requestsUnsubscribe = window.onSnapshot(window.collection(window.db, "requests"), (snapshot) => {
+  // โหลดครั้งแรกทันที
+  loadEvents();
+
+  // หยุด interval เก่าก่อน
+  if (window._eventsInterval) clearInterval(window._eventsInterval);
+
+  // polling ทุก 20 วินาที — รับข้อมูลใหม่เรื่อยๆ โดยไม่ต้องพึ่ง WebSocket
+  window._eventsInterval = setInterval(loadEvents, 20000);
+
+  // เก็บ loadEvents ไว้ใช้เรียก manual refresh ได้
+  window._reloadEvents = loadEvents;
+
+  // หยุด onSnapshot เดิมถ้ายังมีอยู่
+  if (eventsUnsubscribe) { eventsUnsubscribe(); eventsUnsubscribe = null; }
+  if (window.publicEventsInterval) { clearInterval(window.publicEventsInterval); window.publicEventsInterval = null; }
+
+  // ========== REQUESTS: ใช้ getDocs เช่นกัน ==========
+  async function loadRequests() {
+    if (!currentUser) { appData.requests = []; updateRequestBadge(); return; }
+    if (currentUser.role !== 'CEO' && currentUser.role !== 'SuperAdmin') {
+      appData.requests = []; updateRequestBadge(); return;
+    }
+    try {
+      const snapshot = await window.getDocs(window.collection(window.db, "requests"));
       const requests = [];
-      snapshot.forEach(doc => requests.push({ id: doc.id, ...doc.data() }));
+      snapshot.forEach(docSnap => requests.push({ id: docSnap.id, ...docSnap.data() }));
       appData.requests = requests;
       updateRequestBadge();
-      if (currentUser && document.getElementById('tab-request') && !document.getElementById('tab-request').classList.contains('hidden')) renderRequests();
-    }, (err) => console.warn("requests listener error:", err));
-  } else {
-    appData.requests = [];
-    updateRequestBadge();
+      if (document.getElementById('tab-request') &&
+          !document.getElementById('tab-request').classList.contains('hidden')) {
+        renderRequests();
+      }
+    } catch (e) {
+      console.warn("loadRequests error:", e.message);
+    }
   }
+
+  loadRequests();
+  if (window._requestsInterval) clearInterval(window._requestsInterval);
+  window._requestsInterval = setInterval(loadRequests, 30000);
+  if (requestsUnsubscribe) { requestsUnsubscribe(); requestsUnsubscribe = null; }
 }
 
 // ====== CLOUDINARY REAL STORAGE USAGE ======
@@ -2364,23 +2396,63 @@ function saveCloudinaryCredentials() {
   faceEncodingsCache = null;
   faceEncodingsCacheEventId = null;
 
+// ✅ ใหม่ — event document เก็บแค่ metadata
 async function saveEventToFirestore(event) {
   if (!window.db) { showToast('⚠️ Firebase ยังไม่พร้อม'); return; }
   try {
+    // บันทึก event metadata (ไม่รวม photos array)
     await window.setDoc(window.doc(window.db, "events", event.id), {
       name: event.name,
       date: event.date,
       desc: event.desc || '',
       cover: event.cover || '',
-      photos: event.photos || [],
+      photoCount: (event.photos || []).length,  // เก็บแค่จำนวน
       visible: event.visible !== false,
       createdAt: event.createdAt || window.serverTimestamp(),
-      faceSearchThreshold: event.faceSearchThreshold  // ← เพิ่มบรรทัดนี้
+      faceSearchThreshold: event.faceSearchThreshold
     });
+
+    // บันทึกแต่ละรูปใน collection photos แยก (ถ้ามี photos ใหม่)
+    if (event.photos && event.photos.length > 0) {
+      for (const ph of event.photos) {
+        // เช็คว่ายังไม่มีใน Firestore (ป้องกัน overwrite)
+        if (ph._isNew) {
+          await window.setDoc(window.doc(window.db, "photos", ph.id), {
+            eventId: event.id,
+            url: ph.data || ph.cloudinaryUrl || '',
+            createdAt: window.serverTimestamp()
+          });
+          delete ph._isNew; // ลบ flag ออกหลัง save
+        }
+      }
+    }
+
     console.log('✅ บันทึก Event ลง Firestore สำเร็จ');
+    if (window._reloadEvents) window._reloadEvents();
   } catch (err) {
     console.error('❌ บันทึก Event ไม่สำเร็จ:', err);
     showToast('⚠️ บันทึกไม่สำเร็จ: ' + err.message);
+  }
+}
+
+// ✅ โหลดรูปของ Event จาก photos collection แยก
+async function loadEventPhotos(eventId) {
+  if (!window.db) return [];
+  try {
+    const q = window.query(
+      window.collection(window.db, "photos"),
+      window.where("eventId", "==", eventId)
+    );
+    const snapshot = await window.getDocs(q);
+    return snapshot.docs.map(d => ({
+      id: d.id,
+      data: d.data().url,
+      cloudinaryUrl: d.data().url,
+      createdAt: d.data().createdAt
+    }));
+  } catch (e) {
+    console.warn("loadEventPhotos error:", e.message);
+    return [];
   }
 }
 
@@ -2389,6 +2461,8 @@ async function deleteEventFromFirestore(eventId) {
   try {
     await window.deleteDoc(window.doc(window.db, "events", eventId));
     console.log('🗑️ ลบ Event จาก Firestore สำเร็จ');
+// ✅ reload events ทันที
+if (window._reloadEvents) window._reloadEvents();
   } catch (err) {
     console.error('❌ ลบ Event ไม่สำเร็จ:', err);
     showToast('⚠️ ลบไม่สำเร็จ: ' + err.message);
@@ -2407,78 +2481,66 @@ async function saveRequestToFirestore(request) {
   }
 }
 
-// ====== USERS & PENDING (localStorage) ======
-function getUsers() { return DB.get('tnk_users', []); }
-function setUsers(u) { DB.set('tnk_users', u); }
-function getPending() { return DB.get('tnk_pending', []); }
-function setPending(p) { DB.set('tnk_pending', p); }
+// ====== BOOTSTRAP — จุดเริ่มต้นระบบทั้งหมด ======
+// ทำงานครั้งเดียวหลัง Firebase พร้อม
+// onAuthStateChanged จะ fire ทุกครั้งที่ login/logout อัตโนมัติ
 
-// ====== RESET CEO ครั้งเดียว (ล้าง CEO เดิมทั้งหมด แล้วสร้างใหม่ แค่ครั้งแรก) ======
-function resetCEOSingle() {
-  // ตรวจสอบว่าเคยล้างแล้วหรือยัง
-  if (localStorage.getItem('ceo_reset_done') === 'true') return;
+window._bootstrapApp = function() {
+  if (!window.db || !window.auth) return;
 
-  let users = getUsers();
-  
-  // 1. ลบ users ทุกคนที่มี role === 'CEO' และ isRoot === true ออก
-  const newUsers = users.filter(u => !(u.role === 'CEO' && u.isRoot === true));
-  
-  // 2. สร้าง CEO คนใหม่ตามสเปก
-  const newCEO = {
-    id: 'ceo_root_' + Date.now(),
-    username: 'CEO',
-    password: 'CEO1234',
-    name: 'Thanakon',
-    role: 'CEO',
-    isRoot: true,
-    avatar: null,
-    approved: true
-  };
-  
-  newUsers.push(newCEO);
-  setUsers(newUsers);
-  
-  // 3. ถ้า currentUser โดนลบ ให้เซ็ตเป็น CEO คนใหม่
-  if (currentUser && !newUsers.find(u => u.id === currentUser.id)) {
-    currentUser = newCEO;
-  }
-  
-  // 4. ตั้ง flag ว่าได้ล้างแล้ว
-  localStorage.setItem('ceo_reset_done', 'true');
-  
-  console.log('✅ ล้าง CEO เดิมทั้งหมด (ครั้งแรก) และสร้าง CEO ใหม่เรียบร้อย:', newCEO.username);
-}
-
-// เรียกใช้งานครั้งแรก (แต่ข้างในจะมีเช็ค flag อีกที)
-resetCEOSingle();
-
-// ====== เริ่มต้นระบบเมื่อ Firebase พร้อม ======
-// แก้ไข window.startTNK (ส่วนที่มีอยู่แล้ว)
-window.startTNK = function() {
-  initUsersListener();
+  // init settings ที่ไม่ขึ้นกับ login
   migrateCEO();
-  initPendingListener();
   migrateOldPending();
-  initFirestoreListeners();
   initGlobalSettingsListener();
-  const saved = DB.get('tnk_saved_login', null);
-  if (saved) {
-    const users = getUsers();
-    const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
-    if (user) { currentUser = user; showAdminView(); return; }
-  }
-  if (!currentUser) renderPublicEvents();
-};
-if (window.firebaseReady && window.db) {
-  window.startTNK();
-} else {
-  console.log("⏳ รอ Firebase พร้อม...");
-  const checkInterval = setInterval(() => {
-    if (window.firebaseReady && window.db) {
-      clearInterval(checkInterval);
-      window.startTNK();
+  initDisplaySettingsListener();
+
+  // ฟัง auth state — fire ทันทีเมื่อเรียก และทุกครั้งที่ login/logout
+  window.auth.onAuthStateChanged(async (firebaseUser) => {
+    // หยุด interval/listener เก่าก่อนทุกครั้ง
+    if (window._eventsInterval)   { clearInterval(window._eventsInterval);   window._eventsInterval = null; }
+    if (window._requestsInterval) { clearInterval(window._requestsInterval); window._requestsInterval = null; }
+    if (window._usersInterval)    { clearInterval(window._usersInterval);    window._usersInterval = null; }
+    if (window._pendingInterval)  { clearInterval(window._pendingInterval);  window._pendingInterval = null; }
+
+    if (firebaseUser) {
+      // === มี session — ดึง user data จาก Firestore ===
+      try {
+        const userData = await getUserFromFirestore(firebaseUser.uid);
+
+        if (!userData || userData.approved === false || userData.deleted === true) {
+          // บัญชีถูกระงับหรือไม่มีข้อมูล
+          await window.signOut(window.auth);
+          showToast('⚠️ บัญชีนี้ไม่ได้รับอนุญาต');
+          return;
+        }
+
+        currentUser = { id: firebaseUser.uid, ...userData };
+        initFirestoreListeners(); // โหลด events + requests
+        initUsersListener();      // โหลด users
+        initPendingListener();    // โหลด pending
+        showAdminView();
+
+      } catch (e) {
+        console.warn('auth restore error:', e.message);
+        currentUser = null;
+        // Firebase พร้อมแต่ดึง user ไม่ได้ — แสดงหน้า public
+        initFirestoreListeners();
+        renderPublicEvents();
+      }
+
+    } else {
+      // === ไม่มี session — หน้า public ===
+      currentUser = null;
+      initFirestoreListeners(); // โหลด events สำหรับ public
+      renderPublicEvents();
     }
-  }, 100);
+  });
+};
+
+// เรียก bootstrap ทันทีถ้า Firebase พร้อมแล้ว
+// หรือรอผ่าน _bootstrapApp ที่ module script จะเรียกให้
+if (window.firebaseReady && window.db) {
+  window._bootstrapApp();
 }
 
 // ====== RENDER ======
@@ -3025,106 +3087,138 @@ function jumpToEvent(id) {
 function openUploadForEvent(id) { document.getElementById('upload-event-id').value = id; document.getElementById('upload-progress').classList.add('hidden'); openModal('uploadModal'); }
 function openPhotoUpload() { document.getElementById('photoUploadInput').click(); }
 
+// ✅ handlePhotoUpload ใหม่ — แยกอัปโหลดออกจากวิเคราะห์ใบหน้า
+// รูปจะถูก save ลง Firestore ทันทีที่อัปโหลดเสร็จ ไม่ต้องรอ face analysis
 async function handlePhotoUpload(input) {
-  const id = document.getElementById('upload-event-id').value || document.getElementById('photos-event-id').value;
+  const id = document.getElementById('upload-event-id').value
+           || document.getElementById('photos-event-id').value;
   if (!input.files.length) return;
+
   const files = Array.from(input.files);
+  const total = files.length;
   const prog = document.getElementById('upload-progress');
   prog.classList.remove('hidden');
-  let done = 0;
-  const total = files.length;
   prog.textContent = `⬆️ เริ่มอัปโหลด 0/${total} รูป...`;
+
   const events = getEvents();
   const evIndex = events.findIndex(e => e.id === id);
+  if (evIndex === -1) {
+    showToast('❌ ไม่พบ Event');
+    prog.classList.add('hidden');
+    return;
+  }
+
+  // ===== STEP 1: อัปโหลดทุกรูปไปยัง Cloudinary ก่อน =====
+  // บันทึกรูปลง Firestore ทันทีทุกรูป ไม่รอ face analysis
+  let done = 0;
+  const uploadedPhotos = []; // เก็บข้อมูลรูปที่อัปโหลดสำเร็จ
+
   for (let i = 0; i < files.length; i++) {
     try {
+      prog.textContent = `⬆️ กำลังอัปโหลดรูปที่ ${i + 1}/${total}...`;
       const imageUrl = await uploadToCloudinary(files[i]);
-      if (evIndex !== -1) {
-        events[evIndex].photos = events[evIndex].photos || [];
-        events[evIndex].photos.push({
+      // ✅ ใหม่ — เพิ่ม _isNew เพื่อให้ saveEventToFirestore รู้ว่าต้อง save รูปนี้
+      const photoObj = {
   id: 'ph_' + Date.now() + '_' + i,
   _index: i.toString(),
   data: imageUrl,
-  cloudinaryUrl: imageUrl
-});
-      }
+  cloudinaryUrl: imageUrl,
+  _isNew: true  // ✅ flag บอกว่าเป็นรูปใหม่ ต้อง save ลง photos collection
+};
+      events[evIndex].photos = events[evIndex].photos || [];
+      events[evIndex].photos.push(photoObj);
+      uploadedPhotos.push({ file: files[i], photo: photoObj });
       done++;
       prog.textContent = `⬆️ อัปโหลดแล้ว ${done}/${total} รูป...`;
-      try {
-        if (evIndex !== -1) {
-          showToast('🔍 กำลังวิเคราะห์ใบหน้า...');
-          const img = await faceapi.bufferToImage(files[i]);
-          const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
-          const tinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 });
-
-          // ใช้ทั้ง SSD และ Tiny เพื่อจับใบหน้าได้ครอบคลุมขึ้น
-          const [detectionsSsd, detectionsTiny] = await Promise.all([
-            faceapi.detectAllFaces(img, options).withFaceLandmarks().withFaceDescriptors(),
-            faceapi.detectAllFaces(img, tinyOptions).withFaceLandmarks().withFaceDescriptors()
-          ]);
-
-          // รวมผลและกรอง duplicate (ใบหน้าที่ตำแหน่งใกล้กันมาก)
-          const detections = [...detectionsSsd];
-          detectionsTiny.forEach(function(td) {
-            var isDup = detectionsSsd.some(function(sd) {
-              var dx = sd.detection.box.x - td.detection.box.x;
-              var dy = sd.detection.box.y - td.detection.box.y;
-              return Math.sqrt(dx*dx + dy*dy) < 30;
-            });
-            if (!isDup) detections.push(td);
-          });
-
-          // --- multi-angle: flip รูปแนวนอนแล้ว encode ซ้ำ ---
-          let flippedDetections = [];
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width || img.naturalWidth;
-            canvas.height = img.height || img.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(img, 0, 0);
-            const flippedImg = await faceapi.bufferToImage(
-              await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85))
-            );
-            flippedDetections = await faceapi.detectAllFaces(flippedImg, options)
-              .withFaceLandmarks()
-              .withFaceDescriptors();
-          } catch(fe) {
-            console.warn('flip encode ล้มเหลว:', fe.message);
-          }
-
-          // รวม detections ปกติ + flipped
-          const allDetections = [...detections, ...flippedDetections];
-
-          if (allDetections.length > 0) {
-            const encodingsObj = {};
-            allDetections.forEach((d, idx) => {
-              encodingsObj[idx] = Array.from(d.descriptor);
-            });
-            const faceDoc = {
-              encodings: encodingsObj,
-              photoId: events[evIndex].photos[events[evIndex].photos.length - 1].id,
-              eventId: id,
-              url: imageUrl
-            };
-            await window.setDoc(window.doc(window.db, 'faceEncodings', faceDoc.photoId), faceDoc);
-            console.log(`✅ เก็บ ${allDetections.length} ใบหน้า (รวม flip) แล้ว`);
-          } else {
-            console.warn('⚠️ ไม่พบใบหน้าในรูปนี้');
-          }
-        }
-      } catch (e) {
-        console.warn('การวิเคราะห์ใบหน้าล้มเหลว:', e.message);
-      }
-      // --- จบวิเคราะห์ใบหน้า ---
-    } catch (err) { showToast(`❌ รูปที่ ${i+1} ไม่สำเร็จ: ${err.message}`); }
+    } catch (err) {
+      showToast(`❌ รูปที่ ${i + 1} ไม่สำเร็จ: ${err.message}`);
+    }
   }
-  if (done > 0 && evIndex !== -1) saveEventToFirestore(events[evIndex]);
-  prog.classList.add('hidden');
-  if (document.getElementById('photosModal').classList.contains('active')) openPhotosModal(id);
-  showToast(`✅ อัปโหลด ${done}/${total} รูปไปยัง Cloudinary เรียบร้อย`);
+
+  // ===== STEP 2: บันทึกรูปทั้งหมดลง Firestore ทันที =====
+  // ทำก่อน face analysis เพื่อให้รูปปรากฏในระบบแม้ face analysis จะล้ม
+  if (done > 0) {
+    prog.textContent = `💾 กำลังบันทึก ${done} รูปลงระบบ...`;
+    await saveEventToFirestore(events[evIndex]);
+    // อัปเดต UI ทันที
+    if (document.getElementById('photosModal').classList.contains('active')) {
+      openPhotosModal(id);
+    }
+    showToast(`✅ อัปโหลด ${done}/${total} รูปเรียบร้อย — กำลังวิเคราะห์ใบหน้า...`);
+  }
+
+  // ===== STEP 3: วิเคราะห์ใบหน้า (ทำหลังจาก save รูปแล้ว) =====
+  // ถ้า face model ยังไม่พร้อม ข้ามไปเลย ไม่บล็อกการอัปโหลด
+  if (uploadedPhotos.length > 0 && faceApiModelsLoaded) {
+    let faceCount = 0;
+    for (let j = 0; j < uploadedPhotos.length; j++) {
+      const { file, photo } = uploadedPhotos[j];
+      prog.classList.remove('hidden');
+      prog.textContent = `🔍 วิเคราะห์ใบหน้า ${j + 1}/${uploadedPhotos.length}...`;
+      try {
+        // timeout 15 วินาทีต่อรูป — ถ้าค้างให้ข้ามไปรูปถัดไป
+        const faceResult = await Promise.race([
+          analyzeFaceForUpload(file, photo.id, id),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 15000)
+          )
+        ]);
+        if (faceResult) faceCount++;
+      } catch (e) {
+        if (e.message === 'timeout') {
+          console.warn(`⚠️ รูปที่ ${j + 1} วิเคราะห์ใบหน้าหมดเวลา ข้ามไป`);
+        } else {
+          console.warn(`⚠️ รูปที่ ${j + 1} วิเคราะห์ใบหน้าล้มเหลว:`, e.message);
+        }
+        // ข้ามรูปนี้ไป ไม่หยุดรูปถัดไป
+      }
+    }
+    prog.textContent = `✅ วิเคราะห์ใบหน้าเสร็จ (พบใบหน้าใน ${faceCount}/${uploadedPhotos.length} รูป)`;
+    setTimeout(() => prog.classList.add('hidden'), 2000);
+  } else {
+    // Face model ยังไม่โหลด — ซ่อน progress bar
+    prog.classList.add('hidden');
+    if (uploadedPhotos.length > 0 && !faceApiModelsLoaded) {
+      showToast('💡 รูปบันทึกแล้ว (วิเคราะห์ใบหน้าได้หลังโหลดโมเดล)');
+    }
+  }
+
   input.value = '';
+}
+
+// ===== ฟังก์ชันแยกวิเคราะห์ใบหน้า (แยกออกมาจาก handlePhotoUpload) =====
+// ใช้แค่ SSD อย่างเดียว (ตัด Tiny + flip ออกเพื่อความเร็ว)
+async function analyzeFaceForUpload(file, photoId, eventId) {
+  try {
+    const img = await faceapi.bufferToImage(file);
+    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+
+    // ใช้แค่ SSD อย่างเดียว — เร็วกว่า 3x บนมือถือ
+    const detections = await faceapi
+      .detectAllFaces(img, options)
+      .withFaceLandmarks()
+      .withFaceDescriptors();
+
+    if (detections.length > 0) {
+      const encodingsObj = {};
+      detections.forEach((d, idx) => {
+        encodingsObj[idx] = Array.from(d.descriptor);
+      });
+      await window.setDoc(window.doc(window.db, 'faceEncodings', photoId), {
+        encodings: encodingsObj,
+        photoId: photoId,
+        eventId: eventId
+      });
+      console.log(`✅ เก็บ ${detections.length} ใบหน้าของรูป ${photoId}`);
+      return true; // พบใบหน้า
+    } else {
+      console.log(`📷 รูป ${photoId} ไม่พบใบหน้า`);
+      return false; // ไม่พบใบหน้า
+    }
+  } catch (e) {
+    console.warn('analyzeFaceForUpload error:', e.message);
+    return false;
+  }
 }
 
 function togglePhotoTick(pid) {
@@ -3133,7 +3227,8 @@ function togglePhotoTick(pid) {
   el.textContent = el.classList.contains('checked') ? '✓' : '';
 }
 
-function deleteCheckedPhotos() {
+// ✅ ใหม่ — ลบจาก photos collection ด้วย
+async function deleteCheckedPhotos() {
   const id = document.getElementById('photos-event-id').value;
   const events = getEvents();
   const idx = events.findIndex(x => x.id === id);
@@ -3141,11 +3236,23 @@ function deleteCheckedPhotos() {
   const toDelete = [];
   document.querySelectorAll('.photo-tick.checked').forEach(el => toDelete.push(el.id.replace('tick-','')));
   if (!toDelete.length) { showToast('⚠️ เลือกรูปก่อน'); return; }
+
+  // ลบจาก memory
   events[idx].photos = events[idx].photos.filter(ph => !toDelete.includes(ph.id));
-  saveEventToFirestore(events[idx]).then(() => {
-    // updateStorageUsage();   // ❌ ป้องกันพื้นที่ลด
-    showToast(`🗑️ ลบ ${toDelete.length} รูปแล้ว`);
-  });
+
+  // ลบจาก photos collection ใน Firestore
+  for (const photoId of toDelete) {
+    try {
+      await window.deleteDoc(window.doc(window.db, "photos", photoId));
+      // ลบ faceEncoding ด้วย
+      await window.deleteDoc(window.doc(window.db, "faceEncodings", photoId)).catch(() => {});
+    } catch (e) {
+      console.warn("delete photo error:", e.message);
+    }
+  }
+
+  await saveEventToFirestore(events[idx]);
+  showToast(`🗑️ ลบ ${toDelete.length} รูปแล้ว`);
   openPhotosModal(id);
 }
 // เปิด Modal แสดงรูปภาพใน Event (ใช้ getDisplayUrl เพื่อประหยัดแบนด์วิดท์)
@@ -3290,7 +3397,7 @@ function renderPending() {
         <div class="member-details">
           <div class="member-info-line"><span class="member-info-label">🚩</span><span>${escapeHtml(p.username)}</span></div>
           <div class="member-info-line"><span class="member-info-label">🔤</span><span>${escapeHtml(p.name)}</span></div>
-          <div class="member-info-line"><span class="member-info-label">🔑</span><span>${canSeePassword() ? p.password : '••••••••'}</span></div>
+          <div class="member-info-line"><span class="member-info-label">🔑</span><span>••••••••</span></div>
         </div>
       </div>
       <div class="member-item-bottom">
@@ -3317,6 +3424,8 @@ async function approveMember(pendingId) {
     // ลบ pending
     await deletePendingFromFirestore(pendingId);
     showToast(`✅ อนุมัติ ${pending.name} เรียบร้อย`);
+if (window._reloadPending) window._reloadPending();
+if (window._reloadUsers) window._reloadUsers();;
     renderMembers();
   } catch (err) {
     console.error(err);
@@ -3331,6 +3440,7 @@ async function rejectMember(pendingId) {
     // (Optional) ลบ user ใน Firebase Auth ด้วย? อาจไม่จำเป็น
     await deletePendingFromFirestore(pendingId);
     showToast('❌ ปฏิเสธแล้ว');
+if (window._reloadPending) window._reloadPending();
     renderMembers();
   } catch (err) {
     showToast('ลบไม่สำเร็จ');
@@ -3383,7 +3493,7 @@ async function renderAllMembers() {
           <div class="member-details">
             <div class="member-info-line"><span class="member-info-label">🚩</span><span>${escapeHtml(u.username)}</span></div>
             <div class="member-info-line"><span class="member-info-label">🔤</span><span>${escapeHtml(u.name)}</span></div>
-            <div class="member-info-line"><span class="member-info-label">🔑</span><span>${showPass ? u.password : '••••••••'}</span></div>
+            <div class="member-info-line"><span class="member-info-label">🔑</span><span>••••••••</span></div>
           </div>
           ${isSelf ? '<div class="self-label">✨ บัญชีตนเอง</div>' : ''}
         </div>
@@ -4224,6 +4334,17 @@ function openEventView(id, mode) {
   if (!ev) return;
   currentEventView = id;
   incrementEventViews(id);
+// ✅ โหลดรูปจาก photos collection ถ้ายังไม่มีใน memory
+if (!ev.photos || ev.photos.length === 0) {
+  loadEventPhotos(id).then(photos => {
+    ev.photos = photos;
+    renderEventPhotos(currentEventPage);
+    document.getElementById('ev-meta').innerHTML = `
+      <span>🗓️ ${formatDate(ev.date)}</span>
+      <span>🖼️ ${photos.length} ภาพ</span>
+    `;
+  });
+}
 
   // รูปปก
   document.getElementById('ev-cover').innerHTML = ev.cover
@@ -4592,18 +4713,17 @@ function closeEventDetailModal() {
   if (modal) modal.remove();
 }
 
-// เปิด Modal รายละเอียด Event (แบบเต็มหน้าจอ)
-function openEventDetailModal(eventId) {
-  // ลบ modal เก่าถ้ามี (ป้องกันซ้ำ)
+// ✅ โค้ดใหม่ — async + await เพื่อรับค่าจาก Firestore
+async function openEventDetailModal(eventId) {
   closeEventDetailModal();
-
   const ev = getEvents().find(x => x.id === eventId);
   if (!ev) return;
 
-  const views = getEventViews(eventId);
-  const downloads = getEventDownloads(eventId);
+  const views = await getEventViews(eventId);       // ✅ รอค่าจาก Firestore
+  const downloads = await getEventDownloads(eventId); // ✅ รอค่าจาก Firestore
 
   const modalOverlay = document.createElement('div');
+  // ... ส่วนที่เหลือเหมือนเดิมทุกอย่าง ไม่ต้องแก้
   modalOverlay.className = 'modal-overlay active';
   modalOverlay.id = 'eventDetailModal';
   // คลิกที่พื้นหลังด้านนอกก็ปิด
@@ -4664,30 +4784,65 @@ function openEventDetailModal(eventId) {
   `;
   document.body.appendChild(modalOverlay);
 }
-// ========== EVENT STATISTICS (views, downloads) ==========
-function getEventStats() {
-  return JSON.parse(localStorage.getItem('tnk_event_stats') || '{}');
+// cache ใน memory เพื่อลด Firestore reads
+const eventStatsCache = {};
+
+async function incrementEventViews(eventId) {
+  if (!window.db) return;
+  // อัปเดต cache ทันที (ไม่รอ Firestore)
+  if (!eventStatsCache[eventId]) eventStatsCache[eventId] = { views: 0, downloads: 0 };
+  eventStatsCache[eventId].views++;
+  try {
+    const ref = window.doc(window.db, 'eventStats', eventId);
+    const snap = await window.getDoc(ref);
+    const current = snap.exists() ? (snap.data().views || 0) : 0;
+    await window.setDoc(ref, { views: current + 1 }, { merge: true });
+  } catch (err) {
+    console.warn('incrementEventViews error:', err.message);
+  }
 }
-function saveEventStats(stats) {
-  localStorage.setItem('tnk_event_stats', JSON.stringify(stats));
+
+async function incrementEventDownloads(eventId) {
+  if (!window.db) return;
+  if (!eventStatsCache[eventId]) eventStatsCache[eventId] = { views: 0, downloads: 0 };
+  eventStatsCache[eventId].downloads++;
+  try {
+    const ref = window.doc(window.db, 'eventStats', eventId);
+    const snap = await window.getDoc(ref);
+    const current = snap.exists() ? (snap.data().downloads || 0) : 0;
+    await window.setDoc(ref, { downloads: current + 1 }, { merge: true });
+  } catch (err) {
+    console.warn('incrementEventDownloads error:', err.message);
+  }
 }
-function incrementEventViews(eventId) {
-  const stats = getEventStats();
-  if (!stats[eventId]) stats[eventId] = { views: 0, downloads: 0 };
-  stats[eventId].views = (stats[eventId].views || 0) + 1;
-  saveEventStats(stats);
+
+async function getEventViews(eventId) {
+  // ถ้ามีใน cache ใช้ cache ก่อน
+  if (eventStatsCache[eventId]?.views !== undefined) {
+    return eventStatsCache[eventId].views;
+  }
+  if (!window.db) return 0;
+  try {
+    const snap = await window.getDoc(window.doc(window.db, 'eventStats', eventId));
+    const val = snap.exists() ? (snap.data().views || 0) : 0;
+    if (!eventStatsCache[eventId]) eventStatsCache[eventId] = { views: 0, downloads: 0 };
+    eventStatsCache[eventId].views = val;
+    return val;
+  } catch { return 0; }
 }
-function incrementEventDownloads(eventId) {
-  const stats = getEventStats();
-  if (!stats[eventId]) stats[eventId] = { views: 0, downloads: 0 };
-  stats[eventId].downloads = (stats[eventId].downloads || 0) + 1;
-  saveEventStats(stats);
-}
-function getEventViews(eventId) {
-  return getEventStats()[eventId]?.views || 0;
-}
-function getEventDownloads(eventId) {
-  return getEventStats()[eventId]?.downloads || 0;
+
+async function getEventDownloads(eventId) {
+  if (eventStatsCache[eventId]?.downloads !== undefined) {
+    return eventStatsCache[eventId].downloads;
+  }
+  if (!window.db) return 0;
+  try {
+    const snap = await window.getDoc(window.doc(window.db, 'eventStats', eventId));
+    const val = snap.exists() ? (snap.data().downloads || 0) : 0;
+    if (!eventStatsCache[eventId]) eventStatsCache[eventId] = { views: 0, downloads: 0 };
+    eventStatsCache[eventId].downloads = val;
+    return val;
+  } catch { return 0; }
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
