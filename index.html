@@ -2559,14 +2559,24 @@ window.startTNK = function() {
   initGlobalSettingsListener();
   initDisplaySettingsListener(); // ✅ เพิ่มบรรทัดนี้
   localStorage.removeItem('tnk_users');
-  localStorage.removeItem('tnk_saved_login');
-  const saved = DB.get('tnk_saved_login', null);
-  if (saved) {
-    const users = getUsers();
-    const user = users.find(u => u.username === saved.u && u.password === saved.p && u.approved);
-    if (user) { currentUser = user; showAdminView(); return; }
-  }
-  if (!currentUser) renderPublicEvents();
+  window.onAuthStateChanged(window.auth, async (firebaseUser) => {
+    if (firebaseUser) {
+      try {
+        const snap = await window.getDoc(window.doc(window.db, 'users', firebaseUser.uid));
+        if (snap.exists()) {
+          const userData = snap.data();
+          if (userData.approved !== false && userData.deleted !== true) {
+            currentUser = { id: firebaseUser.uid, ...userData };
+            showAdminView();
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('onAuthStateChanged error:', e.message);
+      }
+    }
+    if (!currentUser) renderPublicEvents();
+  });
 };
 if (window.firebaseReady && window.db) {
   window.startTNK();
@@ -2845,7 +2855,6 @@ async function showAdminView() {
 async function doLogout() {
   if (window.auth && window.signOut) await window.signOut(window.auth);
   currentUser = null;
-  DB.set('tnk_saved_login', null);
   document.getElementById('header-section').style.display = 'block';
   document.getElementById('gold-section').style.display = 'block';
   document.getElementById('admin-header').classList.remove('active');
