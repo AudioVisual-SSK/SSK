@@ -3195,41 +3195,42 @@ async function handlePhotoUpload(input) {
     showToast(`✅ อัปโหลด ${done}/${total} รูปเรียบร้อย — กำลังวิเคราะห์ใบหน้า...`);
   }
 
-  // ===== STEP 3: วิเคราะห์ใบหน้า (ทำหลังจาก save รูปแล้ว) =====
-  // ถ้า face model ยังไม่พร้อม ข้ามไปเลย ไม่บล็อกการอัปโหลด
-  if (uploadedPhotos.length > 0 && faceApiModelsLoaded) {
-    let faceCount = 0;
-    for (let j = 0; j < uploadedPhotos.length; j++) {
-      const { file, photo } = uploadedPhotos[j];
-      prog.classList.remove('hidden');
-      prog.textContent = `🔍 วิเคราะห์ใบหน้า ${j + 1}/${uploadedPhotos.length}...`;
-      try {
-        // timeout 15 วินาทีต่อรูป — ถ้าค้างให้ข้ามไปรูปถัดไป
-        const faceResult = await Promise.race([
-          analyzeFaceForUpload(file, photo.id, id),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), 15000)
-          )
-        ]);
-        if (faceResult) faceCount++;
-      } catch (e) {
-        if (e.message === 'timeout') {
-          console.warn(`⚠️ รูปที่ ${j + 1} วิเคราะห์ใบหน้าหมดเวลา ข้ามไป`);
-        } else {
-          console.warn(`⚠️ รูปที่ ${j + 1} วิเคราะห์ใบหน้าล้มเหลว:`, e.message);
+// ===== STEP 3: วิเคราะห์ใบหน้า (ทำหลังจาก save รูปแล้ว) =====
+// โหลดโมเดลก่อนเสมอ ไม่ข้ามแม้โมเดลยังไม่พร้อม
+if (uploadedPhotos.length > 0) {
+    prog.classList.remove('hidden');
+    prog.textContent = `⏳ กำลังเตรียมโมเดล AI...`;
+    const modelReady = await ensureFaceApiLoaded(); // รอโหลดโมเดลให้เสร็จก่อน
+    if (modelReady) {
+      let faceCount = 0;
+      for (let j = 0; j < uploadedPhotos.length; j++) {
+        const { file, photo } = uploadedPhotos[j];
+        prog.classList.remove('hidden');
+        prog.textContent = `🔍 วิเคราะห์ใบหน้า ${j + 1}/${uploadedPhotos.length}...`;
+        try {
+          const faceResult = await Promise.race([
+            analyzeFaceForUpload(file, photo.id, id),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('timeout')), 15000)
+            )
+          ]);
+          if (faceResult) faceCount++;
+        } catch (e) {
+          if (e.message === 'timeout') {
+            console.warn(`⚠️ รูปที่ ${j + 1} วิเคราะห์ใบหน้าหมดเวลา ข้ามไป`);
+          } else {
+            console.warn(`⚠️ รูปที่ ${j + 1} วิเคราะห์ใบหน้าล้มเหลว:`, e.message);
+          }
         }
-        // ข้ามรูปนี้ไป ไม่หยุดรูปถัดไป
       }
+      prog.textContent = `✅ วิเคราะห์ใบหน้าเสร็จ (พบใบหน้าใน ${faceCount}/${uploadedPhotos.length} รูป)`;
+      setTimeout(() => prog.classList.add('hidden'), 2000);
+    } else {
+      // โหลดโมเดลไม่สำเร็จ (เน็ตหลุด ฯลฯ)
+      prog.classList.add('hidden');
+      showToast('⚠️ โหลดโมเดล AI ไม่สำเร็จ รูปถูกบันทึกแล้วแต่ไม่สามารถวิเคราะห์ใบหน้าได้');
     }
-    prog.textContent = `✅ วิเคราะห์ใบหน้าเสร็จ (พบใบหน้าใน ${faceCount}/${uploadedPhotos.length} รูป)`;
-    setTimeout(() => prog.classList.add('hidden'), 2000);
-  } else {
-    // Face model ยังไม่โหลด — ซ่อน progress bar
-    prog.classList.add('hidden');
-    if (uploadedPhotos.length > 0 && !faceApiModelsLoaded) {
-      showToast('💡 รูปบันทึกแล้ว (วิเคราะห์ใบหน้าได้หลังโหลดโมเดล)');
-    }
-  }
+}
 
   input.value = '';
 }
